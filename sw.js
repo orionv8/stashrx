@@ -1,11 +1,12 @@
-const CACHE_NAME = 'stashRx-v2';
+const CACHE_NAME = 'stashRx-v3';
 const ASSETS = [
   './',
   './index.html',
   './app.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './favicon.ico'
 ];
 
 self.addEventListener('install', event => {
