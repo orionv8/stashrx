@@ -523,9 +523,7 @@
                             Priority support
                         </li>
                     </ul>
-                    <a href="/cdn-cgi/l/email-protection#30434540405f424470434451435842481e535f5d0f4345525a5553440d6042555d59455d1502007c5953555e4355150200604542535851435516525f54490d785915027315020079150207541502005c595b55150200445f1502004045425358514355150200511502006042555d59455d1502007c5953555e43551e1500711500717d491502007455465953551502007974150371150200150071" class="cta-glow block text-center bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 px-6 rounded-xl transition">
-                        Purchase Premium
-                    </a>
+                    <button onclick="openPaymentModal()" class="cta-glow w-full block text-center bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 px-6 rounded-xl transition cursor-pointer">Purchase Premium</button>
                     <p class="text-center text-xs text-gray-500 mt-4">Generate your Device ID in the app to activate.</p>
                 </div>
             </div>
@@ -668,5 +666,55 @@
             });
         })();
     </script>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-md" onclick="closePaymentModal()"></div>
+        <div class="relative bg-gray-900 border border-white/10 p-8 rounded-3xl w-full max-w-md mx-6 shadow-2xl transform scale-95 transition-transform duration-300" id="paymentModalContent">
+            <button onclick="closePaymentModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="inline-block px-3 py-1 mb-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-widest uppercase">
+                    Premium License
+                </div>
+                <h3 class="text-3xl font-black text-white mb-1">&#8369;5,000</h3>
+                <p class="text-gray-400 text-sm">Valid for 1 Year</p>
+            </div>
+
+            <div class="bg-black/50 border border-white/5 rounded-2xl p-6 mb-6 text-center">
+                <div class="w-48 h-48 bg-gray-800 rounded-xl border-2 border-dashed border-gray-600 flex flex-col items-center justify-center mx-auto mb-4 relative overflow-hidden group">
+                    <!-- Placeholder for QR, we'll replace with actual image later -->
+                    <img id="qrImage" src="qr-placeholder.png" alt="GCash QR" class="hidden absolute inset-0 w-full h-full object-cover">
+                    <svg class="text-gray-500 mb-2" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>
+                    <span class="text-xs text-gray-500 font-medium">QR Code Here</span>
+                </div>
+                <p class="text-white font-bold mb-1">Scan to Pay via GCash / QR Ph</p>
+                <p class="text-sm text-gray-400 mb-4">Or send directly to:</p>
+                <div class="flex items-center justify-between bg-gray-800 rounded-lg p-3">
+                    <span class="text-emerald-400 font-mono font-bold tracking-widest">09XX-XXX-XXXX</span>
+                    <button class="text-xs font-bold text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition">Copy</button>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h4 class="text-white font-bold text-sm">Next Steps:</h4>
+                <div class="flex gap-3 text-sm text-gray-400">
+                    <div class="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs">1</div>
+                    <p>Open stashRx app and copy your <b class="text-emerald-400">Device ID</b>.</p>
+                </div>
+                <div class="flex gap-3 text-sm text-gray-400">
+                    <div class="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs">2</div>
+                    <p>Email your payment screenshot and Device ID to <a href="mailto:orionv888@gmail.com" class="text-emerald-400 hover:underline font-medium">orionv888@gmail.com</a>.</p>
+                </div>
+                <div class="flex gap-3 text-sm text-gray-400">
+                    <div class="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs">3</div>
+                    <p>We'll reply with your License Key within 12 hours to unlock Premium.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
