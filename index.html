@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>stashRx | Offline Pharmacy Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @supports (font: -apple-system-body) {
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        }
+    </style>
+</head>
+<body class="bg-black text-white antialiased selection:bg-emerald-500 selection:text-white">
+    
+    <!-- Navigation -->
+    <nav class="max-w-5xl mx-auto px-6 py-8 flex justify-between items-center">
+        <div class="text-2xl font-black tracking-tight text-white">stash<span class="text-emerald-500">Rx</span></div>
+        <a href="mailto:orionv888@gmail.com" class="text-sm font-semibold text-gray-400 hover:text-white transition">Contact Support</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="max-w-5xl mx-auto px-6 pt-20 pb-32 flex flex-col items-center text-center">
+        <div class="inline-block px-3 py-1 mb-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide uppercase">
+            100% Offline &middot; No Cloud Subs
+        </div>
+        <h1 class="text-5xl md:text-7xl font-black tracking-tight mb-8 leading-tight">
+            The modern journal <br/>for smart pharmacies.
+        </h1>
+        <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+            Track fast-moving inventory, calculate SC/PWD discounts, and manage expenses. Zero backend. Zero lag. Completely offline.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 w-full justify-center">
+            <a href="app.html" class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-8 rounded-2xl transition shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+                Launch Free Version
+            </a>
+            <a href="#premium" class="bg-gray-900 border border-gray-800 hover:bg-gray-800 text-white font-bold py-4 px-8 rounded-2xl transition">
+                Get Premium
+            </a>
+        </div>
+        
+        <div class="mt-12 max-w-md bg-gray-900/50 border border-gray-800 p-5 rounded-2xl flex items-start gap-4 text-left">
+            <div class="bg-gray-800 p-3 rounded-xl text-xl">📲</div>
+            <div>
+                <h4 class="font-bold text-white mb-1">How to Install (iOS / Android)</h4>
+                <p class="text-sm text-gray-400">Tap <b>Launch Free Version</b>. In your browser (Safari/Chrome), tap the Share icon and select <b>"Add to Home Screen"</b>. stashRx will now work exactly like a native offline app.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section class="border-t border-gray-900 bg-gray-950 py-24">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-black p-8 rounded-3xl border border-gray-900">
+                    <div class="text-emerald-500 text-3xl mb-4">⚡️</div>
+                    <h3 class="text-xl font-bold mb-3">Lightning Fast & Offline</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">All data is stored purely on your device. It works instantly even if your internet goes down.</p>
+                </div>
+                <div class="bg-black p-8 rounded-3xl border border-gray-900">
+                    <div class="text-emerald-500 text-3xl mb-4">🛡</div>
+                    <h3 class="text-xl font-bold mb-3">Not a POS. No BIR Stress.</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Designed strictly as a "digital inventory aid". Users must maintain manual ledgers, avoiding strict BIR POS/CAS compliance overhead.</p>
+                </div>
+                <div class="bg-black p-8 rounded-3xl border border-gray-900">
+                    <div class="text-emerald-500 text-3xl mb-4">📊</div>
+                    <h3 class="text-xl font-bold mb-3">SC/PWD & Analytics</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">Automatically calculates legally mandated senior and PWD discounts. Instantly identifies your fastest-moving items.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="premium" class="py-24 max-w-5xl mx-auto px-6">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-black tracking-tight mb-4">Simple, honest pricing.</h2>
+            <p class="text-gray-400 text-lg">Pay once a year. No monthly cloud fees.</p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <!-- Free -->
+            <div class="bg-gray-900 border border-gray-800 p-8 rounded-3xl flex flex-col">
+                <h3 class="text-2xl font-bold mb-2">Free Trial</h3>
+                <div class="text-4xl font-black mb-6">₱0<span class="text-lg text-gray-500 font-normal">/forever</span></div>
+                <ul class="text-gray-400 mb-8 space-y-3 flex-grow text-sm">
+                    <li>✓ 100% Offline Capability</li>
+                    <li>✓ SC/PWD Auto-compute</li>
+                    <li>✓ Export / Import Backup</li>
+                    <li>✗ Limited to 100 inventory items</li>
+                </ul>
+                <a href="app.html" class="block text-center bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-xl transition">Start Free Trial</a>
+            </div>
+            
+            <!-- Premium -->
+            <div class="bg-black border border-emerald-500/50 p-8 rounded-3xl shadow-[0_0_50px_rgba(16,185,129,0.1)] relative flex flex-col">
+                <div class="absolute top-0 right-8 transform -translate-y-1/2 bg-emerald-500 text-black text-xs font-black px-3 py-1 rounded-full tracking-wide">RECOMMENDED</div>
+                <h3 class="text-2xl font-bold mb-2 text-white">Premium License</h3>
+                <div class="text-4xl font-black mb-6 text-white">₱5,000<span class="text-lg text-gray-500 font-normal">/year</span></div>
+                <ul class="text-gray-300 mb-8 space-y-3 flex-grow text-sm">
+                    <li>✓ <b>Unlimited</b> inventory items</li>
+                    <li>✓ 100% Offline Capability</li>
+                    <li>✓ Device-locked secure access</li>
+                    <li>✓ Priority support</li>
+                </ul>
+                <a href="mailto:orionv888@gmail.com?subject=stashRx%20Premium%20License%20Purchase" class="block text-center bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 px-6 rounded-xl transition">Purchase Premium</a>
+                <p class="text-center text-xs text-gray-500 mt-4">Generate your Device ID in the app to activate.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-900 py-12 text-center text-gray-500 text-sm">
+        <div class="max-w-5xl mx-auto px-6">
+            <p class="mb-2">stashRx is provided on an "as-is" basis and is NOT a registered Computerized Accounting System (CAS) or Point of Sale (POS).</p>
+            <p>&copy; 2026 stashRx. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
