@@ -507,28 +507,52 @@ function closeIosModal(){const _0x54b56e=a0_0x3669,_0x5b124a={'lyYYq':_0x54b56e(
 const originalSetItem = localStorage.setItem;
 localStorage.setItem = function(key, value) {
     originalSetItem.apply(this, arguments);
-    if (key === 'stashRx_license') {
+    if (key === 'stashRx_license' || key === 'stashRx_deviceID') {
         try {
             const sys = new Dexie('stashRxSys');
             sys.version(1).stores({ settings: 'id' });
-            sys.settings.put({id: 'license', key: value});
+            sys.settings.put({id: key, value: value});
         } catch(e) {}
     }
 };
-(async function() {
-    if (!localStorage.getItem('stashRx_license')) {
-        try {
-            const sys = new Dexie('stashRxSys');
-            sys.version(1).stores({ settings: 'id' });
-            const saved = await sys.settings.get('license');
-            if (saved && saved.key) {
-                originalSetItem.call(localStorage, 'stashRx_license', saved.key);
-                if (typeof checkPremiumStatus === 'function') checkPremiumStatus();
+
+// Intercept onload to guarantee restore finishes before app init
+const originalOnload = window.onload || seedData;
+window.onload = async function(e) {
+    try {
+        const sys = new Dexie('stashRxSys');
+        sys.version(1).stores({ settings: 'id' });
+        
+        // Restore Device ID first
+        if (!localStorage.getItem('stashRx_deviceID')) {
+            let savedDevId = await sys.settings.get('stashRx_deviceID');
+            if (!savedDevId) savedDevId = await sys.settings.get('stashRx_deviceId'); // fallback
+            if (savedDevId && savedDevId.value) {
+                originalSetItem.call(localStorage, 'stashRx_deviceID', savedDevId.value);
             }
-        } catch(e) {}
+        }
+        
+        // Restore License next
+        if (!localStorage.getItem('stashRx_license')) {
+            const savedLic = await sys.settings.get('stashRx_license');
+            if (savedLic && savedLic.value) {
+                originalSetItem.call(localStorage, 'stashRx_license', savedLic.value);
+            } else {
+                const oldLic = await sys.settings.get('license');
+                if (oldLic && oldLic.key) {
+                    originalSetItem.call(localStorage, 'stashRx_license', oldLic.key);
+                }
+            }
+        }
+    } catch(err) {
+        console.error("Restore failed", err);
     }
-})();
-window['onload']=seedData;
+    
+    // Now safely boot the app
+    if (typeof originalOnload === 'function') {
+        originalOnload(e);
+    }
+};
 </script>
 </div>
     <script>
