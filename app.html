@@ -774,6 +774,9 @@ window.updateDashboardStats = originalUpdateDashboardStats;
 
 
 
+
+
+
 <script>
 // Override Export Data to include all tables
 window.exportData = async function() {
@@ -825,7 +828,12 @@ window.exportData = async function() {
     }
 };
 
-// Override Import Data to read all tables
+function getSheetCaseInsensitive(workbook, name) {
+    const sheetName = workbook.SheetNames.find(s => s.toLowerCase() === name.toLowerCase());
+    return sheetName ? workbook.Sheets[sheetName] : null;
+}
+
+// Override Import Data to read all tables robustly
 window.handleImport = async function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -834,63 +842,103 @@ window.handleImport = async function(event) {
     reader.onload = async function(e) {
         try {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
+            const workbook = XLSX.read(data, {type: 'array', cellDates: true});
             
-            if (workbook.Sheets['System_Config']) {
-                const sysData = XLSX.utils.sheet_to_json(workbook.Sheets['System_Config']);
+            // Legacy fallback: if there is only 1 sheet and it's not named one of the known tables,
+            // assume it's the inventory.
+            const isLegacy = workbook.SheetNames.length === 1 && 
+                            !['inventory', 'sales', 'expenses', 'customers', 'system_config'].includes(workbook.SheetNames[0].toLowerCase());
+            
+            const sysSheet = getSheetCaseInsensitive(workbook, 'System_Config');
+            if (sysSheet) {
+                const sysData = XLSX.utils.sheet_to_json(sysSheet);
                 for (let item of sysData) {
                     if (item.key && item.value) {
-                        localStorage.setItem(item.key, item.value);
+                        localStorage.setItem(String(item.key), String(item.value));
                     }
                 }
             }
             
-            if (workbook.Sheets['inventory']) {
-                const invData = XLSX.utils.sheet_to_json(workbook.Sheets['inventory']);
-                const validInv = invData.filter(i => i.id !== undefined && i.id !== '');
+            const invSheet = isLegacy ? workbook.Sheets[workbook.SheetNames[0]] : getSheetCaseInsensitive(workbook, 'inventory');
+            if (invSheet) {
+                let invData = XLSX.utils.sheet_to_json(invSheet);
+                let validInv = invData.filter(i => i.id !== undefined && i.id !== '');
+                validInv = validInv.map(i => {
+                    return {
+                        ...i,
+                        id: parseInt(i.id),
+                        stock: parseFloat(i.stock) || 0,
+                        price: parseFloat(i.price) || 0,
+                        exp: i.exp instanceof Date ? 
+                             (String(i.exp.getMonth()+1).padStart(2,'0') + '/' + i.exp.getFullYear()) : 
+                             String(i.exp || '')
+                    };
+                }).filter(i => !isNaN(i.id));
+                
                 if (validInv.length) {
                     await db.inventory.clear();
                     await db.inventory.bulkAdd(validInv);
                 }
             }
-            if (workbook.Sheets['sales']) {
-                const salesData = XLSX.utils.sheet_to_json(workbook.Sheets['sales']);
-                const validSales = salesData.filter(s => s.id !== undefined && s.id !== '');
-                const processed = validSales.map(s => {
+            
+            const salesSheet = getSheetCaseInsensitive(workbook, 'sales');
+            if (salesSheet) {
+                let salesData = XLSX.utils.sheet_to_json(salesSheet);
+                let validSales = salesData.filter(s => s.id !== undefined && s.id !== '');
+                let processed = validSales.map(s => {
                     if (s.items && typeof s.items === 'string') {
-                        try { s.items = JSON.parse(s.items); } catch(err) {}
+                        try { s.items = JSON.parse(s.items); } catch(err) { s.items = []; }
                     }
                     if (s.discountDetails && typeof s.discountDetails === 'string') {
-                        try { s.discountDetails = JSON.parse(s.discountDetails); } catch(err) {}
+                        try { s.discountDetails = JSON.parse(s.discountDetails); } catch(err) { s.discountDetails = {}; }
                     }
-                    return s;
-                });
+                    return {
+                        ...s,
+                        id: parseInt(s.id),
+                        total: parseFloat(s.total) || 0
+                    };
+                }).filter(s => !isNaN(s.id));
                 if (processed.length) {
                     await db.sales.clear();
                     await db.sales.bulkAdd(processed);
                 }
             }
-            if (workbook.Sheets['expenses']) {
-                const expData = XLSX.utils.sheet_to_json(workbook.Sheets['expenses']);
-                const validExp = expData.filter(e => e.id !== undefined && e.id !== '');
+            
+            const expSheet = getSheetCaseInsensitive(workbook, 'expenses');
+            if (expSheet) {
+                let expData = XLSX.utils.sheet_to_json(expSheet);
+                let validExp = expData.filter(e => e.id !== undefined && e.id !== '');
+                validExp = validExp.map(e => ({
+                    ...e,
+                    id: parseInt(e.id),
+                    amount: parseFloat(e.amount) || 0
+                })).filter(e => !isNaN(e.id));
                 if (validExp.length) {
                     await db.expenses.clear();
                     await db.expenses.bulkAdd(validExp);
                 }
             }
-            if (workbook.Sheets['customers']) {
-                const cusData = XLSX.utils.sheet_to_json(workbook.Sheets['customers']);
-                const validCus = cusData.filter(c => c.idNumber !== undefined && c.idNumber !== '');
+            
+            const cusSheet = getSheetCaseInsensitive(workbook, 'customers');
+            if (cusSheet) {
+                let cusData = XLSX.utils.sheet_to_json(cusSheet);
+                let validCus = cusData.filter(c => c.idNumber !== undefined && c.idNumber !== '');
+                validCus = validCus.map(c => ({
+                    ...c,
+                    idNumber: String(c.idNumber)
+                }));
                 if (validCus.length) {
                     await db.customers.clear();
                     await db.customers.bulkAdd(validCus);
                 }
             }
             
-            if(typeof loadInventory === 'function') loadInventory();
-            if(typeof updateDashboardStats === 'function') updateDashboardStats();
-            if(typeof iosAlert !== 'undefined') iosAlert('Import completed successfully! All data has been updated.', 'Success');
-            else alert('Import completed successfully!');
+            if(typeof loadInventory === 'function') await loadInventory();
+            if(typeof updateDashboardStats === 'function') await updateDashboardStats();
+            if(typeof renderInventoryStatus === 'function') await renderInventoryStatus();
+            
+            if(typeof iosAlert !== 'undefined') iosAlert('Import completed successfully! Refresh the page if some lists do not update.', 'Success');
+            else alert('Import completed successfully! Refresh the page to see changes.');
         } catch(err) {
             console.error(err);
             if(typeof iosAlert !== 'undefined') iosAlert('Import failed: ' + err.message, 'Error');
