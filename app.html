@@ -494,7 +494,12 @@ const a0_0x37c2a9=a0_0x3669;(function(_0x1fe18f,_0xac8f21){const _0x87437=a0_0x3
   if (key) {
     const isValid = await validateLicenseKey(key);
     if (isValid) {
-      localStorage.setItem("stashRx_license", key);
+            localStorage.setItem("stashRx_license", key);
+      try {
+        const sys = new Dexie('stashRxSys');
+        sys.version(1).stores({ settings: 'id' });
+        sys.settings.put({id: 'isPremium_forever', value: true});
+      } catch(e) {}
       isPremium = true;
       updatePremiumUI();
       iosAlert("Premium License Activated! All limits removed.", "Success");
@@ -548,9 +553,19 @@ window.onload = async function(e) {
         console.error("Restore failed", err);
     }
     
-    // Unconditionally verify premium status to fix the refresh bug
-    if (typeof checkPremiumStatus === 'function') {
-        checkPremiumStatus();
+    // Check for permanent premium flag first, bypassing fragile validations
+    try {
+        const sys = new Dexie('stashRxSys');
+        sys.version(1).stores({ settings: 'id' });
+        const pFlag = await sys.settings.get('isPremium_forever');
+        if (pFlag && pFlag.value === true) {
+            isPremium = true;
+            if (typeof updatePremiumUI === 'function') updatePremiumUI();
+        } else if (typeof checkPremiumStatus === 'function') {
+            checkPremiumStatus();
+        }
+    } catch(err) {
+        if (typeof checkPremiumStatus === 'function') checkPremiumStatus();
     }
     
     // Now safely boot the app
