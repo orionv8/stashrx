@@ -211,17 +211,6 @@
                 <span class="text-gray-400 text-[12px] font-bold">TO</span>
                 <input type="date" id="reportEndDate" class="flex-grow bg-transparent text-[13px] text-gray-700 outline-none text-center font-medium" onchange="updateDashboardStats()">
             </div>
-
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
-                    <div class="text-[20px] font-bold text-emerald-600" id="statTodaySales">₱0.00</div>
-                    <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-500 mt-1">Sales</div>
-                </div>
-                <div class="bg-red-50 border border-red-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
-                    <div class="text-[20px] font-bold text-red-600" id="statTodayExp">₱0.00</div>
-                    <div class="text-[10px] uppercase tracking-wider font-bold text-red-500 mt-1">Expenses</div>
-                </div>
-            </div>
             
             <div class="flex justify-between items-end mb-2 px-1">
                 <h3 class="text-gray-500 text-[12px] font-bold uppercase tracking-wider">Transaction Log</h3>
@@ -729,14 +718,27 @@ window.updateDashboardStats = originalUpdateDashboardStats;
 
 </script>
 
-    <!-- Analytics Modal -->
-    <div id="analyticsModalOverlay" class="fixed inset-0 bg-black/40 z-50 hidden opacity-0 transition-opacity duration-200 flex justify-center items-end sm:items-center">
-        <div id="analyticsModalCard" class="bg-[#F2F2F7] w-full sm:w-[400px] sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col transform translate-y-full sm:translate-y-0 transition-transform duration-300 shadow-xl overflow-hidden">
-            <div class="flex justify-between items-center p-4 bg-white border-b border-gray-200 flex-shrink-0">
-                <h2 class="text-lg font-bold text-gray-900">Dashboard Analytics</h2>
-                <button onclick="closeAnalyticsModal()" class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center font-bold active:bg-gray-200">✕</button>
+    <!-- Analytics Modal (Drawer) -->
+    <div id="analyticsModalOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-200 flex flex-col justify-end">
+        <div class="flex-grow w-full" onclick="closeAnalyticsModal()"></div>
+        <div id="analyticsModalCard" class="bg-[#F2F2F7] w-full rounded-t-[20px] max-h-[85vh] flex flex-col transform translate-y-full transition-transform duration-300 shadow-2xl overflow-hidden pointer-events-auto">
+            <div class="bg-white flex justify-between items-center p-4 border-b border-gray-100 flex-shrink-0">
+                <button onclick="closeAnalyticsModal()" class="text-emerald-600 font-medium text-[17px] px-1 active:opacity-50">Close</button>
+                <h2 class="font-semibold text-[17px]">Analytics</h2>
+                <div class="w-[45px]"></div>
             </div>
-            <div class="p-4 overflow-y-auto space-y-4">
+            <div class="p-4 overflow-y-auto space-y-4 pb-12">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
+                    <div class="text-[20px] font-bold text-emerald-600" id="statTodaySales">₱0.00</div>
+                    <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-500 mt-1">Sales</div>
+                </div>
+                <div class="bg-red-50 border border-red-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
+                    <div class="text-[20px] font-bold text-red-600" id="statTodayExp">₱0.00</div>
+                    <div class="text-[10px] uppercase tracking-wider font-bold text-red-500 mt-1">Expenses</div>
+                </div>
+            </div>
+                
                 <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
                     <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Revenue vs Expenses</h3>
                     <div class="relative h-[250px] w-full">
