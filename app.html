@@ -378,9 +378,10 @@ const a0_0x37c2a9=a0_0x3669;(function(_0x1fe18f,_0xac8f21){const _0x87437=a0_0x3
   const existingKey = localStorage.getItem("stashRx_license") || "";
   const instructions = `
     <div class="text-left text-sm mb-4 text-gray-600">
-      Premium removes the 100-item inventory limit.<br><br>
-      <span class="text-gray-500">Device ID:</span> <b class="text-emerald-600 select-all">${deviceID}</b><br><br>
-      Send this ID to <a href="mailto:orionv888@gmail.com" class="text-emerald-500 underline">orionv888@gmail.com</a> to purchase your ₱5,000/yr License Key.
+      <p class="mb-2">You are using the free version with a <strong>100 item inventory limit</strong>.</p>
+      <p class="bg-gray-100 p-2 rounded font-mono text-center mb-3">Device ID: <b class="text-emerald-600 select-all">${deviceID}</b></p>
+      <p class="mb-2">To unlock, enter license key below:</p>
+      <p class="text-xs">For premium access, <a href="mailto:orionv888@gmail.com" class="text-emerald-500 underline font-bold">contact us</a>.</p>
     </div>
   `;
   const key = await iosPrompt(instructions, existingKey, "stashRx Premium");
