@@ -218,18 +218,15 @@
         </div>
         
         <main class="flex-grow overflow-y-auto px-4 pb-24 relative">
-            
-            
-            
-            <!-- Analytics FAB -->
-            <button onclick="openAnalyticsModal()" class="fixed bottom-[100px] right-4 bg-indigo-600 text-white p-4 rounded-full shadow-lg active:scale-90 transition z-40 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-            </button>
             <div id="dashboardReportList" class="space-y-3">
-
                 <!-- Transactions Injected Here -->
             </div>
         </main>
+        
+        <!-- Analytics FAB -->
+        <button onclick="openAnalyticsModal()" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-14 h-14 bg-[#10b981] text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 active:bg-emerald-600 transition z-40">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        </button>
     </div>
 
     <!-- Inventory Screen (Hidden by default) -->
