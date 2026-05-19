@@ -1,8 +1,9 @@
-const CACHE_NAME = 'stashRx-v9';
+const CACHE_NAME = 'stashRx-v11';
 const ASSETS = [
   '/stashrx/',
   '/stashrx/index.html',
   '/stashrx/app.html',
+  '/stashrx/chart.umd.min.js',
   '/stashrx/manifest.json',
   '/stashrx/icon-192.png',
   '/stashrx/icon-512.png',

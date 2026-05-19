@@ -11,6 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Include Dexie.js for IndexedDB -->
     <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
+    <script src="chart.umd.min.js"></script>
     <!-- Include SheetJS for Excel Export -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
@@ -228,6 +229,23 @@
         </div>
         
         <main class="flex-grow overflow-y-auto px-4 pb-24 relative">
+
+            <!-- Charts Section -->
+            <div class="mb-6 space-y-4">
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Revenue vs Expenses</h3>
+                    <div class="relative h-[200px] w-full">
+                        <canvas id="chartCashflow"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Top 10 Fast Moving</h3>
+                    <div class="relative h-[250px] w-full">
+                        <canvas id="chartTopItems"></canvas>
+                    </div>
+                </div>
+            </div>
+            
             <div id="dashboardReportList" class="space-y-3">
                 <!-- Transactions Injected Here -->
             </div>
@@ -545,5 +563,150 @@ function closeIosModal(){const _0x54b56e=a0_0x3669,_0x5b124a={'lyYYq':_0x54b56e(
         });
     </script>
 
+
+<script>
+// --- Chart.js Integration ---
+let cashflowChart = null;
+let topItemsChart = null;
+
+async function updateCharts() {
+    const startInput = document.getElementById('reportStartDate').value;
+    const endInput = document.getElementById('reportEndDate').value;
+    if (!startInput || !endInput) return;
+
+    const startStr = startInput + "T00:00:00";
+    const endStr = endInput + "T23:59:59";
+    const startDate = new Date(startStr);
+    const endDate = new Date(endStr);
+
+    const sales = await db.sales.toArray();
+    const expenses = await db.expenses.toArray();
+
+    // 1. Prepare Revenue vs Expenses (Daily grouping)
+    // Create a dictionary of dates
+    let datesDict = {};
+    let tempDate = new Date(startDate);
+    while (tempDate <= endDate) {
+        let dStr = tempDate.toISOString().split('T')[0];
+        datesDict[dStr] = { sales: 0, expenses: 0 };
+        tempDate.setDate(tempDate.getDate() + 1);
+    }
+
+    sales.forEach(sale => {
+        let d = new Date(sale.date);
+        if (d >= startDate && d <= endDate) {
+            let dStr = d.toISOString().split('T')[0];
+            if (datesDict[dStr]) datesDict[dStr].sales += sale.total;
+        }
+    });
+
+    expenses.forEach(exp => {
+        let d = new Date(exp.date);
+        if (d >= startDate && d <= endDate) {
+            let dStr = d.toISOString().split('T')[0];
+            if (datesDict[dStr]) datesDict[dStr].expenses += exp.amount;
+        }
+    });
+
+    const labels = Object.keys(datesDict).map(d => {
+        let dateObj = new Date(d);
+        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+    const salesData = Object.values(datesDict).map(v => v.sales);
+    const expData = Object.values(datesDict).map(v => v.expenses);
+
+    if (cashflowChart) {
+        cashflowChart.data.labels = labels;
+        cashflowChart.data.datasets[0].data = salesData;
+        cashflowChart.data.datasets[1].data = expData;
+        cashflowChart.update();
+    } else {
+        const ctx1 = document.getElementById('chartCashflow').getContext('2d');
+        cashflowChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Sales', data: salesData, backgroundColor: '#10b981', borderRadius: 4 },
+                    { label: 'Expenses', data: expData, backgroundColor: '#ef4444', borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f4f6' } }
+                },
+                plugins: { legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, font: {size: 10} } } }
+            }
+        });
+    }
+
+    // 2. Prepare Top 10 Fast Moving Items
+    let itemSales = {};
+    sales.forEach(sale => {
+        let d = new Date(sale.date);
+        if (d >= startDate && d <= endDate) {
+            if (sale.items) {
+                sale.items.forEach(item => {
+                    if (!itemSales[item.id]) itemSales[item.id] = { qty: 0, name: '' };
+                    itemSales[item.id].qty += item.qty;
+                });
+            }
+        }
+    });
+
+    // We need item names. Let's get them from inventory
+    const inventory = await db.inventory.toArray();
+    let inventoryMap = {};
+    inventory.forEach(i => {
+        inventoryMap[i.id] = i.brand ? i.brand : i.generic;
+    });
+
+    let topItems = Object.keys(itemSales).map(id => {
+        return {
+            name: inventoryMap[parseInt(id)] || 'Item #' + id,
+            qty: itemSales[id].qty
+        };
+    }).sort((a, b) => b.qty - a.qty).slice(0, 10);
+
+    const topLabels = topItems.map(i => i.name.length > 15 ? i.name.substring(0, 15) + '...' : i.name);
+    const topData = topItems.map(i => i.qty);
+
+    if (topItemsChart) {
+        topItemsChart.data.labels = topLabels;
+        topItemsChart.data.datasets[0].data = topData;
+        topItemsChart.update();
+    } else {
+        const ctx2 = document.getElementById('chartTopItems').getContext('2d');
+        topItemsChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: topLabels,
+                datasets: [{ label: 'Qty Sold', data: topData, backgroundColor: '#3b82f6', borderRadius: 4 }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f4f6' } },
+                    y: { grid: { display: false }, ticks: { font: {size: 10} } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+}
+
+// Hook into the existing updateDashboardStats
+const originalUpdateDashboardStats = window.updateDashboardStats;
+window.updateDashboardStats = async function() {
+    await originalUpdateDashboardStats();
+    try {
+        await updateCharts();
+    } catch(e) { console.error("Chart Error", e); }
+};
+</script>
 </body>
+
 </html>
