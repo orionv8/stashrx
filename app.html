@@ -502,11 +502,12 @@ const a0_0x37c2a9=a0_0x3669;(function(_0x1fe18f,_0xac8f21){const _0x87437=a0_0x3
       iosAlert("Invalid License Key. Please check and try again.", "Error");
     }
   }
+}
 // Premium persistence backup logic
 const originalSetItem = localStorage.setItem;
 localStorage.setItem = function(key, value) {
     originalSetItem.apply(this, arguments);
-    if (key === 'stashRx_license' || key === 'stashRx_deviceId') {
+    if (key === 'stashRx_license' || key === 'stashRx_deviceID') {
         try {
             const sys = new Dexie('stashRxSys');
             sys.version(1).stores({ settings: 'id' });
@@ -523,10 +524,12 @@ localStorage.setItem = function(key, value) {
         let restoredAny = false;
 
         // Restore Device ID first
-        if (!localStorage.getItem('stashRx_deviceId')) {
-            const savedDevId = await sys.settings.get('stashRx_deviceId');
+        if (!localStorage.getItem('stashRx_deviceID')) {
+            let savedDevId = await sys.settings.get('stashRx_deviceID');
+            if (!savedDevId) savedDevId = await sys.settings.get('stashRx_deviceId'); // fallback
+            
             if (savedDevId && savedDevId.value) {
-                originalSetItem.call(localStorage, 'stashRx_deviceId', savedDevId.value);
+                originalSetItem.call(localStorage, 'stashRx_deviceID', savedDevId.value);
                 restoredAny = true;
             }
         }
