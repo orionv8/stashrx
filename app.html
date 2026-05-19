@@ -548,6 +548,11 @@ window.onload = async function(e) {
         console.error("Restore failed", err);
     }
     
+    // Unconditionally verify premium status to fix the refresh bug
+    if (typeof checkPremiumStatus === 'function') {
+        checkPremiumStatus();
+    }
+    
     // Now safely boot the app
     if (typeof originalOnload === 'function') {
         originalOnload(e);
