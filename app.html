@@ -203,7 +203,7 @@
 
     <!-- Dashboard Screen (Hidden by default) -->
     <div id="screenDashboard" class="flex-grow hidden flex-col h-full overflow-hidden bg-[#F2F2F7]">
-        <div class="pt-[20px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]">
+        <div class="pt-[110px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]">
             <!-- Date Range Filter -->
             <div class="flex items-center space-x-2 mb-4 mt-0 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
                 <input type="date" id="reportStartDate" class="flex-grow bg-transparent text-[13px] text-gray-700 outline-none text-center font-medium" onchange="updateDashboardStats()">
@@ -237,7 +237,7 @@
     <!-- Inventory Screen (Hidden by default) -->
     <div id="screenInventory" class="flex-grow hidden flex-col h-full overflow-hidden bg-[#F2F2F7]">
         <!-- Sticky Header for Search padding -->
-        <div class="pt-[105px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]"></div>
+        <div class="pt-[110px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]"></div>
         
         <!-- Scrolling List for Inventory Status -->
         <main class="flex-grow overflow-y-auto px-4 pb-24 relative">
@@ -329,6 +329,112 @@
         </div>
     </div>
 
+    
+    <!-- iOS Style Add Modal -->
+    <div id="addModalOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden flex justify-center items-center px-4 opacity-0 transition-opacity duration-300">
+        <div id="addModalCard" class="bg-[#F2F2F7] w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+            <!-- Header -->
+            <div class="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center rounded-t-[24px]">
+                <button onclick="closeAddModal()" class="text-blue-500 font-semibold text-[17px] active:opacity-50">Cancel</button>
+                <h3 class="font-bold text-[17px] text-black">Add Item</h3>
+                <button onclick="saveNewItem()" class="text-blue-500 font-bold text-[17px] active:opacity-50">Save</button>
+            </div>
+            
+            <!-- Form Area -->
+            <div class="p-4 space-y-4">
+                <div class="bg-white rounded-xl overflow-hidden">
+                    <div class="flex items-center px-4 py-2.5 border-b border-gray-100">
+                        <span class="w-20 text-[15px] font-medium text-gray-900">Generic</span>
+                        <input type="text" id="addGeneric" class="flex-grow text-[15px] outline-none bg-transparent" placeholder="e.g. Paracetamol">
+                    </div>
+                    <div class="flex items-center px-4 py-2.5 border-b border-gray-100">
+                        <span class="w-20 text-[15px] font-medium text-gray-900">Brand</span>
+                        <input type="text" id="addBrand" class="flex-grow text-[15px] outline-none bg-transparent" placeholder="e.g. Biogesic (Optional)">
+                    </div>
+                    <div class="flex items-center px-4 py-2.5 border-b border-gray-100">
+                        <span class="w-20 text-[15px] font-medium text-gray-900">Stock</span>
+                        <input type="number" id="addStock" class="flex-grow text-[15px] outline-none bg-transparent" placeholder="0">
+                    </div>
+                    <div class="flex items-center px-4 py-2.5 border-b border-gray-100">
+                        <span class="w-20 text-[15px] font-medium text-gray-900">Price ₱</span>
+                        <input type="number" step="0.01" id="addPrice" class="flex-grow text-[15px] outline-none bg-transparent" placeholder="0.00">
+                    </div>
+                    <div class="flex items-center px-4 py-2.5">
+                        <span class="w-20 text-[15px] font-medium text-gray-900">Exp</span>
+                        <input type="text" id="addExp" class="flex-grow text-[15px] outline-none bg-transparent" placeholder="MM/YYYY">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function openAddModal() {
+            // Clear fields
+            document.getElementById('addGeneric').value = '';
+            document.getElementById('addBrand').value = '';
+            document.getElementById('addStock').value = '';
+            document.getElementById('addPrice').value = '';
+            document.getElementById('addExp').value = '';
+            
+            const overlay = document.getElementById('addModalOverlay');
+            const card = document.getElementById('addModalCard');
+            overlay.classList.remove('hidden');
+            // Trigger reflow
+            void overlay.offsetWidth;
+            overlay.classList.remove('opacity-0');
+            card.classList.remove('scale-95');
+        }
+        
+        function closeAddModal() {
+            const overlay = document.getElementById('addModalOverlay');
+            const card = document.getElementById('addModalCard');
+            overlay.classList.add('opacity-0');
+            card.classList.add('scale-95');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
+        
+        async function saveNewItem() {
+            const generic = document.getElementById('addGeneric').value.trim();
+            const brand = document.getElementById('addBrand').value.trim();
+            const stock = parseInt(document.getElementById('addStock').value) || 0;
+            const price = parseFloat(document.getElementById('addPrice').value) || 0;
+            const expRaw = document.getElementById('addExp').value.trim();
+            
+            if (!generic) {
+                alert('Generic name is required');
+                return;
+            }
+            
+            let exp = expRaw;
+            // Simple validation for MM/YYYY
+            if (exp && !/^(0[1-9]|1[0-2])\/20[2-9][0-9]$/.test(exp)) {
+                alert('Expiry must be MM/YYYY format');
+                return;
+            }
+            
+            const newItem = {
+                generic,
+                brand,
+                stock,
+                price,
+                exp
+            };
+            
+            await db.inventory.add(newItem);
+            closeAddModal();
+            // Assuming loadInventory exists and we can call it to refresh
+            if (typeof loadInventory === 'function') {
+                await loadInventory();
+            }
+            if (typeof renderInventoryStatus === 'function') {
+                renderInventoryStatus();
+            }
+        }
+    </script>
+
     <!-- iOS Style Edit Modal -->
     <div id="editModalOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex justify-center items-center px-4 opacity-0 transition-opacity duration-300">
         <div id="editModalCard" class="bg-[#F2F2F7] w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
@@ -415,5 +521,24 @@ function closeIosModal(){const _0x54b56e=a0_0x3669,_0x5b124a={'lyYYq':_0x54b56e(
             }
         }, 1000);
     </script>
+
+    <script>
+        // Auto-set dashboard dates to current local date
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            // Local date string in YYYY-MM-DD
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${yyyy}-${mm}-${dd}`;
+            
+            const startInput = document.getElementById('reportStartDate');
+            const endInput = document.getElementById('reportEndDate');
+            
+            if (startInput && !startInput.value) startInput.value = dateStr;
+            if (endInput && !endInput.value) endInput.value = dateStr;
+        });
+    </script>
+
 </body>
 </html>
