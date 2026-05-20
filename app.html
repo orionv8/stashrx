@@ -193,6 +193,16 @@
                                     <span class="text-[13px]">Restore</span>
                                 </div>
                             </button>
+
+                        <button onclick="manualSyncToCloud(); toggleMenu(); resetSettingsMenu();" class="w-full py-2.5 px-3 bg-emerald-50/50 rounded-xl text-emerald-700 text-sm font-semibold active:bg-emerald-100 flex items-center gap-3 transition border border-emerald-100">
+                            <div class="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center text-emerald-600">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                            </div>
+                            <div class="flex flex-col items-start">
+                                <span class="text-[13px]">Sync to Cloud</span>
+                            </div>
+                        </button>
+
                         </div>
 
                     </div>
@@ -1194,7 +1204,48 @@ localStorage.setItem = function(key, value) {
         }
     }
 
+    
+    async function manualSyncToCloud() {
+        if (!navigator.onLine) {
+            iosAlert("You must be online to sync.", "Offline");
+            return;
+        }
+        if (typeof isPremium === 'undefined' || !isPremium) {
+            iosAlert("Cloud Sync is a Premium feature.", "Premium Required");
+            return;
+        }
+        
+        try {
+            const deviceId = getDeviceID();
+            const inv = await db.inventory.toArray();
+            const sal = await db.sales.toArray();
+            const exp = await db.expenses.toArray();
+            let cus = [];
+            if (db.customers) {
+                 cus = await db.customers.toArray();
+            }
+            
+            const backupPayload = JSON.stringify({
+                lastSync: new Date().toISOString(),
+                inventory: JSON.stringify(inv),
+                sales: JSON.stringify(sal),
+                expenses: JSON.stringify(exp),
+                customers: JSON.stringify(cus)
+            });
+            
+            const storageRef = firebase.storage().ref();
+            const backupRef = storageRef.child('backups/' + deviceId + '.json');
+            await backupRef.putString(backupPayload, 'raw', { contentType: 'application/json' });
+            
+            iosAlert("Your data has been successfully saved to the cloud.", "Sync Complete");
+        } catch(syncErr) {
+            console.error("Manual cloud sync failed:", syncErr);
+            iosAlert("An error occurred while saving your data: " + syncErr.message, "Sync Failed");
+        }
+    }
+
     async function restoreFromCloud() {
+
         if (typeof isPremium === 'undefined' || !isPremium) {
             iosAlert("Cloud Restore is a Premium feature. Please unlock the app to use it.", "Premium Required");
             return;
