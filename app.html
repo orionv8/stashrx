@@ -121,27 +121,14 @@
                 <a href="#" id="navInventory" onclick="showInventory()" class="block px-4 py-3 rounded-xl text-gray-700 font-medium active:bg-gray-50">Inventory</a>
                 <a href="#" id="navLedger" onclick="showLedger()" class="block px-4 py-3 bg-emerald-50 rounded-xl text-emerald-700 font-semibold">Sales Ledger</a>
                 <a href="#" id="navExpenses" onclick="showExpenses()" class="block px-4 py-3 rounded-xl text-gray-700 font-medium active:bg-gray-50">Expenses</a>
+                <a href="#" id="navSettings" onclick="showSettingsModal(); toggleMenu();" class="block px-4 py-3 rounded-xl text-gray-700 font-medium active:bg-gray-50 flex items-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    Settings
+                </a>
             </nav>
             
             <div class="p-4 border-t border-gray-100 space-y-2 pb-6">
-                <input type="file" id="importFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleImport(event)">
-                <button onclick="document.getElementById('importFile').click()" class="w-full py-2 bg-gray-50 rounded-lg text-gray-600 text-sm font-medium active:bg-gray-100 flex justify-center items-center gap-1.5 transition">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Import Inventory
-                </button>
-                <button onclick="exportData()" class="w-full py-2 bg-gray-50 rounded-lg text-gray-600 text-sm font-medium active:bg-gray-100 flex justify-center items-center gap-1.5 transition">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    Export Backup
-                </button>
-                
-                <button onclick="migrateData()" class="mt-2 w-full py-2 bg-yellow-50 rounded-lg text-yellow-700 text-sm font-medium active:bg-yellow-100 flex justify-center items-center gap-1.5 transition">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    Migrate Old Backups
-                </button>
-                <button onclick="restoreFromCloud()" class="mt-2 w-full py-2 bg-gray-50 rounded-lg text-gray-600 text-sm font-medium active:bg-gray-100 flex justify-center items-center gap-1.5 transition">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path><polyline points="21 18 21 12 15 12"></polyline></svg>
-                    Restore from Cloud
-                </button>
+<input type="file" id="importFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleImport(event)">
                 
                 <!-- Bottom Links -->
                 <div class="mt-6 w-full flex flex-col items-center space-y-2">
@@ -1199,6 +1186,85 @@ localStorage.setItem = function(key, value) {
 
 </script>
 
-</body>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 z-[100] hidden items-end justify-center sm:items-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeSettingsModal()"></div>
+        <div class="bg-white w-full sm:w-[400px] sm:rounded-2xl rounded-t-2xl shadow-2xl relative z-10 transform translate-y-full transition-transform duration-300" id="settingsModalCard">
+            <!-- Handle -->
+            <div class="w-full flex justify-center pt-3 pb-1 sm:hidden">
+                <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+            </div>
+            
+            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100">
+                <h3 class="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    Settings
+                </h3>
+                <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition active:scale-95">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Data &amp; Backup</h4>
+                    
+                    <button onclick="document.getElementById('importFile').click(); closeSettingsModal();" class="w-full py-3 px-4 bg-gray-50 rounded-xl text-gray-700 text-sm font-semibold active:bg-gray-100 flex items-center gap-3 transition border border-gray-100">
+                        <div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-blue-500">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span>Import Inventory</span>
+                            <span class="text-[10px] text-gray-400 font-normal">Load from Excel or CSV</span>
+                        </div>
+                    </button>
+                    
+                    <button onclick="exportData(); closeSettingsModal();" class="w-full py-3 px-4 bg-gray-50 rounded-xl text-gray-700 text-sm font-semibold active:bg-gray-100 flex items-center gap-3 transition border border-gray-100">
+                        <div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-indigo-500">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span>Export Backup</span>
+                            <span class="text-[10px] text-gray-400 font-normal">Download JSON to device</span>
+                        </div>
+                    </button>
+                </div>
+                
+                <div class="space-y-2 pt-2">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <span class="text-emerald-500">PRO</span> Cloud Features
+                    </h4>
+                    
+                    <button onclick="restoreFromCloud(); closeSettingsModal();" class="w-full py-3 px-4 bg-emerald-50/50 rounded-xl text-emerald-700 text-sm font-semibold active:bg-emerald-100 flex items-center gap-3 transition border border-emerald-100">
+                        <div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-emerald-600">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path><polyline points="21 18 21 12 15 12"></polyline></svg>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span>Restore from Cloud</span>
+                            <span class="text-[10px] text-emerald-600/70 font-normal">Recover your latest online backup</span>
+                        </div>
+                    </button>
+                    
+                    <button onclick="migrateData(); closeSettingsModal();" class="w-full py-3 px-4 bg-yellow-50/50 rounded-xl text-yellow-700 text-sm font-semibold active:bg-yellow-100 flex items-center gap-3 transition border border-yellow-100">
+                        <div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-yellow-600">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <span>Migrate Old Backups</span>
+                            <span class="text-[10px] text-yellow-600/70 font-normal">Move legacy data to Cloud Storage</span>
+                        </div>
+                    </button>
+                </div>
+                
+            </div>
+            
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 sm:rounded-b-2xl">
+                <button onclick="closeSettingsModal()" class="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-xl active:bg-gray-300 transition text-[15px]">Close Settings</button>
+            </div>
+        </div>
+    </div>
+\n</body>
 
 </html>
