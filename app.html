@@ -1079,6 +1079,31 @@ localStorage.setItem = function(key, value) {
 
 
 <script>
+<script>
+async function manualSyncToCloud() {
+        if (!navigator.onLine) {
+            iosAlert("You must be online to sync.", "Offline");
+            return;
+        }
+</script>
+
+<script>
+async function restoreFromCloud() {
+
+        if (typeof isPremium === 'undefined' || !isPremium) {
+            iosAlert("Cloud Restore is a Premium feature. Please unlock the app to use it.", "Premium Required");
+            return;
+        }
+</script>
+
+<script>
+async function migrateData() {
+        if (!isPremium) {
+            iosAlert("Premium required.", "Error");
+            return;
+        }
+</script>
+
 // --- CLOUD SYNC LOGIC ---
 
 
@@ -1154,12 +1179,7 @@ localStorage.setItem = function(key, value) {
 })();
 
     
-    async function migrateData() {
-        if (!isPremium) {
-            iosAlert("Premium required.", "Error");
-            return;
-        }
-        
+            
         try {
             if (typeof firebase === 'undefined') {
                 iosAlert("Firebase not loaded yet.", "Error");
@@ -1205,12 +1225,7 @@ localStorage.setItem = function(key, value) {
     }
 
     
-    async function manualSyncToCloud() {
-        if (!navigator.onLine) {
-            iosAlert("You must be online to sync.", "Offline");
-            return;
-        }
-        if (typeof isPremium === 'undefined' || !isPremium) {
+            if (typeof isPremium === 'undefined' || !isPremium) {
             iosAlert("Cloud Sync is a Premium feature.", "Premium Required");
             return;
         }
@@ -1244,13 +1259,7 @@ localStorage.setItem = function(key, value) {
         }
     }
 
-    async function restoreFromCloud() {
-
-        if (typeof isPremium === 'undefined' || !isPremium) {
-            iosAlert("Cloud Restore is a Premium feature. Please unlock the app to use it.", "Premium Required");
-            return;
-        }
-
+    
         const confirmed = await iosConfirm("This will ERASE all current data on this device and replace it with your last cloud backup. Are you sure you want to proceed?", "Confirm Restore");
         if (!confirmed) {
             return;
