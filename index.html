@@ -1,747 +1,187 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <title>stashRx | Offline Pharmacy Journal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>stashRx - Pharmacy Operations Journal</title>
+    <meta name="description" content="The lightning-fast, offline-first inventory and operations journal for independent Philippine pharmacies.">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-
-        /* Hero glow */
-        .hero-glow {
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            top: -100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 40%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        /* CTA glow */
-        .cta-glow {
-            box-shadow: 0 0 40px rgba(16,185,129,0.3), 0 0 80px rgba(16,185,129,0.1);
-            transition: all 0.3s ease;
-        }
-        .cta-glow:hover {
-            box-shadow: 0 0 50px rgba(16,185,129,0.5), 0 0 100px rgba(16,185,129,0.2);
-            transform: translateY(-2px);
-        }
-
-        /* Card hover */
-        .feature-card {
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .feature-card:hover {
-            border-color: rgba(16,185,129,0.3);
-            box-shadow: 0 0 30px rgba(16,185,129,0.08);
-            transform: translateY(-4px);
-        }
-
-        /* Premium card glow */
-        .premium-glow {
-            position: relative;
-        }
-        .premium-glow::before {
-            content: '';
-            position: absolute;
-            inset: -1px;
-            border-radius: 1.5rem;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(16,185,129,0.6), rgba(16,185,129,0.1), rgba(16,185,129,0.4));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-            animation: glowPulse 3s ease-in-out infinite;
-        }
-        @keyframes glowPulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
-        }
-
-        /* Phone mockup */
-        .phone-frame {
-            width: 280px;
-            height: 560px;
-            border-radius: 40px;
-            border: 3px solid rgba(255,255,255,0.12);
-            background: #F2F2F7;
-            overflow: hidden;
-            position: relative;
-            box-shadow:
-                0 0 0 1px rgba(0,0,0,0.3),
-                0 20px 60px rgba(0,0,0,0.5),
-                0 0 80px rgba(16,185,129,0.1);
-        }
-        .phone-notch {
-            width: 120px;
-            height: 28px;
-            background: #000;
-            border-radius: 0 0 18px 18px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 10;
-        }
-        .phone-screen {
-            position: absolute;
-            inset: 0;
-            overflow: hidden;
-        }
-
-        /* Mini app UI inside phone */
-        .mini-header {
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(12px);
-            padding: 8px 14px 10px;
-            border-bottom: 0.5px solid rgba(0,0,0,0.08);
-        }
-        .mini-search {
-            background: #E3E3E8;
-            border-radius: 8px;
-            padding: 6px 10px;
-            font-size: 11px;
-            color: #9CA3AF;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .mini-item {
-            background: white;
-            padding: 10px 14px;
-            border-bottom: 0.5px solid rgba(0,0,0,0.06);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .mini-item-name {
-            font-size: 12px;
-            font-weight: 600;
-            color: #111;
-            margin-bottom: 2px;
-        }
-        .mini-item-sub {
-            font-size: 9px;
-            color: #9CA3AF;
-        }
-        .mini-item-price {
-            font-size: 12px;
-            font-weight: 700;
-            color: #059669;
-        }
-        .mini-item-stock {
-            font-size: 9px;
-            color: #9CA3AF;
-            text-align: right;
-        }
-        .mini-tab-bar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(12px);
-            border-top: 0.5px solid rgba(0,0,0,0.08);
-            display: flex;
-            justify-content: space-around;
-            padding: 6px 0 18px;
-        }
-        .mini-tab {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            font-size: 9px;
-            color: #9CA3AF;
-        }
-        .mini-tab.active { color: #059669; }
-
-        /* Scroll animations */
-        .reveal {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.7s ease, transform 0.7s ease;
-        }
-        .reveal.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Step connector line */
-        .step-line {
-            position: absolute;
-            top: 24px;
-            left: calc(16.66% + 24px);
-            right: calc(16.66% + 24px);
-            height: 2px;
-            background: linear-gradient(90deg, rgba(16,185,129,0.3), rgba(16,185,129,0.1));
-        }
-
-        /* FAQ accordion */
-        .faq-item {
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            transition: all 0.3s ease;
-        }
-        .faq-item:hover {
-            background: rgba(255,255,255,0.02);
-        }
-        .faq-answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease, padding 0.3s ease;
-        }
-        .faq-answer.open {
-            max-height: 200px;
-            padding-bottom: 20px;
-        }
-        .faq-toggle {
-            transition: transform 0.3s ease;
-        }
-        .faq-toggle.open {
-            transform: rotate(45deg);
-        }
-
-        /* Subtle grid background */
-        .bg-grid {
-            background-image:
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 60px 60px;
-        }
-
-        /* Smooth scroll */
-        html { scroll-behavior: smooth; }
+        body { font-family: "Inter", sans-serif; }
+        .hero-pattern { background-image: radial-gradient(#10b981 1px, transparent 1px); background-size: 24px 24px; }
+        .gradient-text { background: linear-gradient(135deg, #059669 0%, #10b981 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
-<body class="bg-black text-white antialiased selection:bg-emerald-500 selection:text-white">
+<body class="bg-gray-50 text-gray-800 antialiased selection:bg-emerald-200 selection:text-emerald-900">
 
     <!-- Navigation -->
-    <nav class="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="text-2xl font-black tracking-tight text-white">
-                stash<span class="text-emerald-400">Rx</span>
+    <nav class="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">+</div>
+                <span class="text-xl font-bold tracking-tight text-gray-900">stash<span class="text-emerald-500">Rx</span></span>
             </div>
-            <div class="flex items-center gap-6">
-                <a href="#features" class="text-sm text-gray-400 hover:text-white transition hidden sm:block">Features</a>
-                <a href="#premium" class="text-sm text-gray-400 hover:text-white transition hidden sm:block">Pricing</a>
-                <a href="#faq" class="text-sm text-gray-400 hover:text-white transition hidden sm:block">FAQ</a>
-                <a href="app.html" class="text-sm font-semibold bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-lg hover:bg-emerald-500/20 transition">
-                    Launch App
-                </a>
+            <div class="hidden md:flex space-x-8">
+                <a href="#features" class="text-sm font-medium text-gray-600 hover:text-emerald-600 transition">Features</a>
+                <a href="#pricing" class="text-sm font-medium text-gray-600 hover:text-emerald-600 transition">Pricing</a>
+            </div>
+            <div>
+                <a href="app.html" class="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2.5 rounded-full text-sm font-medium transition shadow-md shadow-gray-900/10">Open App</a>
             </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <header class="relative pt-32 pb-24 md:pb-32 overflow-hidden bg-grid">
-        <div class="hero-glow"></div>
-        <div class="max-w-6xl mx-auto px-6 relative z-10">
-            <div class="flex flex-col lg:flex-row items-center gap-16">
-                <!-- Left: Copy -->
-                <div class="flex-1 text-center lg:text-left">
-                    <div class="reveal inline-block px-3 py-1.5 mb-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-widest uppercase">
-                        100% Offline &middot; No Cloud Fees
-                    </div>
-                    <h1 class="reveal text-5xl md:text-6xl lg:text-7xl font-black tracking-tight mb-6 leading-[1.05]">
-                        The modern journal<br/>
-                        <span class="bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent">for smart pharmacies.</span>
-                    </h1>
-                    <p class="reveal text-gray-400 text-lg md:text-xl max-w-xl mb-10 leading-relaxed">
-                        Track fast-moving inventory, calculate SC/PWD discounts, and manage expenses &mdash; all without internet. Zero backend. Zero lag.
-                    </p>
-                    <div class="reveal flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <a href="app.html" class="cta-glow bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-8 rounded-2xl text-center transition">
-                            Launch Free Version
-                        </a>
-                        <a href="#premium" class="bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-bold py-4 px-8 rounded-2xl text-center transition">
-                            View Pricing
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Right: Phone Mockup -->
-                <div class="reveal flex-shrink-0">
-                    <div class="phone-frame">
-                        <div class="phone-screen">
-                            <div class="phone-notch"></div>
-                            <!-- Mini App Header -->
-                            <div class="mini-header" style="padding-top: 36px;">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                                    <span style="font-size:14px;font-weight:600;color:#111;">Sales Ledger</span>
-                                    <span style="font-size:10px;color:#059669;font-weight:500;">May 19</span>
-                                </div>
-                                <div class="mini-search">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                    Search medicines...
-                                </div>
-                            </div>
-                            <!-- Mini Inventory List -->
-                            <div style="background:#F2F2F7;">
-                                <div style="padding:8px 14px 4px;font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.05em;">Fast Moving</div>
-                                <div class="mini-item">
-                                    <div>
-                                        <div class="mini-item-name">Biogesic 500mg</div>
-                                        <div class="mini-item-sub">Paracetamol &middot; Box/100</div>
-                                    </div>
-                                    <div>
-                                        <div class="mini-item-price">&#8369;245.00</div>
-                                        <div class="mini-item-stock">142 in stock</div>
-                                    </div>
-                                </div>
-                                <div class="mini-item">
-                                    <div>
-                                        <div class="mini-item-name">Neozep Forte</div>
-                                        <div class="mini-item-sub">Phenylephrine &middot; Box/50</div>
-                                    </div>
-                                    <div>
-                                        <div class="mini-item-price">&#8369;189.00</div>
-                                        <div class="mini-item-stock">87 in stock</div>
-                                    </div>
-                                </div>
-                                <div class="mini-item">
-                                    <div>
-                                        <div class="mini-item-name">Amoxicillin 500mg</div>
-                                        <div class="mini-item-sub">Antibiotic &middot; Box/30</div>
-                                    </div>
-                                    <div>
-                                        <div class="mini-item-price">&#8369;320.00</div>
-                                        <div class="mini-item-stock">54 in stock</div>
-                                    </div>
-                                </div>
-                                <div class="mini-item">
-                                    <div>
-                                        <div class="mini-item-name">Losartan 50mg</div>
-                                        <div class="mini-item-sub">Antihypertensive &middot; Box/30</div>
-                                    </div>
-                                    <div>
-                                        <div class="mini-item-price">&#8369;275.00</div>
-                                        <div class="mini-item-stock">38 in stock</div>
-                                    </div>
-                                </div>
-                                <div class="mini-item">
-                                    <div>
-                                        <div class="mini-item-name">Metformin 500mg</div>
-                                        <div class="mini-item-sub">Antidiabetic &middot; Box/30</div>
-                                    </div>
-                                    <div>
-                                        <div class="mini-item-price">&#8369;198.00</div>
-                                        <div class="mini-item-stock">63 in stock</div>
-                                    </div>
-                                </div>
-                                <div class="mini-item">
-                                    <div>
-                                        <div class="mini-item-name">Cetirizine 10mg</div>
-                                        <div class="mini-item-sub">Antihistamine &middot; Box/50</div>
-                                    </div>
-                                    <div>
-                                        <div class="mini-item-price">&#8369;165.00</div>
-                                        <div class="mini-item-stock">91 in stock</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Mini Tab Bar -->
-                            <div class="mini-tab-bar">
-                                <div class="mini-tab active">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/></svg>
-                                    <span>Sales</span>
-                                </div>
-                                <div class="mini-tab">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-                                    <span>Inventory</span>
-                                </div>
-                                <div class="mini-tab">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                                    <span>Expenses</span>
-                                </div>
-                                <div class="mini-tab">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                                    <span>Settings</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <section class="pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto flex flex-col items-center text-center relative">
+        <div class="absolute inset-0 hero-pattern opacity-[0.03] z-0 pointer-events-none"></div>
+        <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-semibold uppercase tracking-wide mb-6">
+                <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                Now with Silent Cloud Sync
             </div>
-        </div>
-    </header>
-
-    <!-- Features Section -->
-    <section id="features" class="border-t border-white/5 py-24 md:py-32">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="text-center mb-16 reveal">
-                <p class="text-emerald-400 text-sm font-bold tracking-widest uppercase mb-4">Why stashRx</p>
-                <h2 class="text-4xl md:text-5xl font-black tracking-tight">Built for real pharmacy work.</h2>
-            </div>
-            <div class="grid md:grid-cols-3 gap-6">
-                <div class="feature-card reveal bg-white/[0.03] p-8 rounded-2xl">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
-                        <svg class="text-emerald-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold mb-3">Lightning Fast & Offline</h3>
-                    <p class="text-gray-400 text-sm leading-relaxed">All data lives on your device via IndexedDB. Works instantly &mdash; even if your internet goes down mid-shift.</p>
-                </div>
-                <div class="feature-card reveal bg-white/[0.03] p-8 rounded-2xl">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
-                        <svg class="text-emerald-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold mb-3">Not a POS. No BIR Stress.</h3>
-                    <p class="text-gray-400 text-sm leading-relaxed">Designed strictly as a digital inventory aid. Maintain your manual ledgers while stashRx handles the tracking and math.</p>
-                </div>
-                <div class="feature-card reveal bg-white/[0.03] p-8 rounded-2xl">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
-                        <svg class="text-emerald-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold mb-3">SC/PWD & Analytics</h3>
-                    <p class="text-gray-400 text-sm leading-relaxed">Auto-calculates legally mandated senior and PWD discounts. Instantly surfaces your fastest-moving inventory items.</p>
-                </div>
-                <div class="feature-card reveal bg-white/[0.03] p-8 rounded-2xl">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
-                        <svg class="text-emerald-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold mb-3">Export & Backup</h3>
-                    <p class="text-gray-400 text-sm leading-relaxed">One-tap export to Excel spreadsheets. Import/export full database backups to keep your data safe across devices.</p>
-                </div>
-                <div class="feature-card reveal bg-white/[0.03] p-8 rounded-2xl">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
-                        <svg class="text-emerald-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold mb-3">Install as App</h3>
-                    <p class="text-gray-400 text-sm leading-relaxed">Add to your home screen on any phone or tablet. Works and looks like a native app &mdash; no app store needed.</p>
-                </div>
-                <div class="feature-card reveal bg-white/[0.03] p-8 rounded-2xl">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
-                        <svg class="text-emerald-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                    </div>
-                    <h3 class="text-lg font-bold mb-3">Expense Tracking</h3>
-                    <p class="text-gray-400 text-sm leading-relaxed">Log daily expenses with categories and notes. See where your money goes alongside your sales data.</p>
-                </div>
+            <h1 class="text-5xl md:text-6xl font-bold tracking-tight text-gray-900 leading-[1.1] mb-6">
+                Master your inventory.<br>
+                <span class="gradient-text">Never miss an expiration.</span>
+            </h1>
+            <p class="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+                The lightning-fast, offline-first <strong>Operations Journal</strong> built specifically for independent Philippine pharmacies. Monitor stock, log daily transactions, and keep your data perfectly synced in the background.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="app.html" class="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3.5 rounded-full text-base font-semibold transition shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2">
+                    Launch Journal
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
             </div>
         </div>
     </section>
 
-    <!-- How It Works -->
-    <section class="border-t border-white/5 bg-white/[0.01] py-24 md:py-32">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="text-center mb-16 reveal">
-                <p class="text-emerald-400 text-sm font-bold tracking-widest uppercase mb-4">Get Started</p>
-                <h2 class="text-4xl md:text-5xl font-black tracking-tight">Up and running in 60 seconds.</h2>
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-white">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Built for Pharmacy Operations</h2>
+                <p class="text-gray-500 max-w-2xl mx-auto">Not a bloated enterprise system. Just the exact tools you need to keep your shelves stocked, compliant, and profitable.</p>
             </div>
-            <div class="relative">
-                <!-- Connector line (desktop) -->
-                <div class="step-line hidden md:block"></div>
-                <div class="grid md:grid-cols-3 gap-10">
-                    <div class="reveal text-center">
-                        <div class="w-12 h-12 rounded-full bg-emerald-500 text-black font-black text-lg flex items-center justify-center mx-auto mb-5 relative z-10">1</div>
-                        <h3 class="text-lg font-bold mb-2">Open in Browser</h3>
-                        <p class="text-gray-400 text-sm leading-relaxed">Tap "Launch Free Version" to open stashRx in Safari (iOS) or Chrome (Android). No download required.</p>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-5 text-emerald-500">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                     </div>
-                    <div class="reveal text-center">
-                        <div class="w-12 h-12 rounded-full bg-emerald-500 text-black font-black text-lg flex items-center justify-center mx-auto mb-5 relative z-10">2</div>
-                        <h3 class="text-lg font-bold mb-2">Add to Home Screen</h3>
-                        <p class="text-gray-400 text-sm leading-relaxed">Tap the Share icon, then select "Add to Home Screen." stashRx will appear as an icon on your device.</p>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Inventory & Expirations</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Track generic and brand names easily. Get instant, color-coded visual alerts for low stock and expiring medicines before they become a loss.</p>
+                </div>
+                
+                <!-- Feature 2 -->
+                <div class="p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-5 text-emerald-500">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     </div>
-                    <div class="reveal text-center">
-                        <div class="w-12 h-12 rounded-full bg-emerald-500 text-black font-black text-lg flex items-center justify-center mx-auto mb-5 relative z-10">3</div>
-                        <h3 class="text-lg font-bold mb-2">Start Tracking</h3>
-                        <p class="text-gray-400 text-sm leading-relaxed mb-4">Record sales and calculate discounts &mdash; everything works offline from day one.</p>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Daily Operations Log</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Log transactions and daily expenses in seconds. Instantly view your net profit dashboard without manually crunching numbers at the end of the shift.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-5 text-emerald-500">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                     </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Automated SC/PWD</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Log Senior Citizen and PWD ID numbers seamlessly. The journal automatically computes the exact VAT-exempt 20% discount required by law.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-5 text-emerald-500">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Silent Cloud Sync</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Runs offline for blazing speed, but silently backs up your entire database to the cloud every 5 minutes. Clear your browser cache? Your data is still safe.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-5 text-emerald-500">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Offline-First Speed</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">No loading spinners. No waiting for servers. Because it relies on your device's local storage, operations are instantaneous even if your WiFi drops.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-5 text-emerald-500">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Excel Export</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Prefer spreadsheets? Export your entire journal to a standard .xlsx file anytime, or import a bulk inventory list to get started instantly.</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Pricing Section -->
-    <section id="premium" class="border-t border-white/5 py-24 md:py-32">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="text-center mb-16 reveal">
-                <p class="text-emerald-400 text-sm font-bold tracking-widest uppercase mb-4">Pricing</p>
-                <h2 class="text-4xl md:text-5xl font-black tracking-tight mb-4">Simple, honest pricing.</h2>
-                <p class="text-gray-400 text-lg">Pay once a year. No monthly cloud fees. No surprises.</p>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                <!-- Free -->
-                <div class="reveal bg-white/[0.03] border border-white/5 p-8 rounded-3xl flex flex-col">
-                    <h3 class="text-xl font-bold mb-1">Free</h3>
-                    <p class="text-gray-500 text-sm mb-5">Try everything, no commitment</p>
-                    <div class="text-5xl font-black mb-8">&#8369;0<span class="text-lg text-gray-500 font-normal ml-1">/forever</span></div>
-                    <ul class="text-gray-300 mb-8 space-y-3 flex-grow text-sm">
-                        <li class="flex items-center gap-3">
-                            <svg class="text-emerald-400 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            100% Offline Capability
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <svg class="text-emerald-400 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            SC/PWD Auto-compute
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <svg class="text-emerald-400 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            Export / Import Backup
-                        </li>
-                        <li class="flex items-center gap-3 text-gray-500">
-                            <svg class="text-gray-600 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            Limited to 100 inventory items
-                        </li>
-                    </ul>
-                    <a href="app.html" class="block text-center bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold py-3.5 px-6 rounded-xl transition">
-                        Start Free
-                    </a>
-                </div>
-
-                <!-- Premium -->
-                <div class="reveal premium-glow bg-white/[0.03] p-8 rounded-3xl flex flex-col relative">
-                    <div class="absolute top-0 right-8 -translate-y-1/2 bg-emerald-500 text-black text-xs font-black px-4 py-1.5 rounded-full tracking-wider uppercase">
-                        Recommended
-                    </div>
-                    <h3 class="text-xl font-bold mb-1 text-white">Premium License</h3>
-                    <p class="text-gray-500 text-sm mb-5">Unlock unlimited everything</p>
-                    <div class="text-5xl font-black mb-8 text-white">&#8369;2,499<span class="text-lg text-gray-500 font-normal ml-1">/year</span></div>
-                    <ul class="text-gray-300 mb-8 space-y-3 flex-grow text-sm">
-                        <li class="flex items-center gap-3">
-                            <svg class="text-emerald-400 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            <b class="text-white">Unlimited</b>&nbsp;inventory items
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <svg class="text-emerald-400 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            100% Offline Capability
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <svg class="text-emerald-400 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            Device-locked secure access
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <svg class="text-emerald-400 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            Priority support
-                        </li>
-                    </ul>
-                    <button onclick="openPaymentModal()" class="cta-glow w-full block text-center bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 px-6 rounded-xl transition cursor-pointer">Purchase Premium</button>
-                    <p class="text-center text-xs text-gray-500 mt-4">Generate your Device ID in the app to activate.</p>
-                </div>
+    <section id="pricing" class="py-20 bg-gray-50">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+            <p class="text-gray-500 mb-10">No hardware to buy. No hidden fees. Just one affordable annual license.</p>
+            
+            <div class="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">PREMIUM</div>
+                <div class="text-5xl font-bold text-gray-900 mb-2">₱2,499<span class="text-lg text-gray-400 font-normal">/year</span></div>
+                <p class="text-gray-500 text-sm mb-8">Valid for one specific device.</p>
+                
+                <ul class="text-left space-y-4 mb-8 max-w-sm mx-auto">
+                    <li class="flex items-start gap-3 text-gray-700">
+                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Unlimited Inventory Items
+                    </li>
+                    <li class="flex items-start gap-3 text-gray-700">
+                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Silent Cloud Sync & Backup
+                    </li>
+                    <li class="flex items-start gap-3 text-gray-700">
+                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Automated SC/PWD Computations
+                    </li>
+                    <li class="flex items-start gap-3 text-gray-700">
+                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Expiration Tracking Dashboard
+                    </li>
+                </ul>
+                
+                <a href="app.html" class="block w-full bg-gray-900 hover:bg-gray-800 text-white py-3.5 rounded-xl font-semibold transition">Launch Journal</a>
             </div>
         </div>
     </section>
 
-    <!-- FAQ Section -->
-    <section id="faq" class="border-t border-white/5 bg-white/[0.01] py-24 md:py-32">
-        <div class="max-w-3xl mx-auto px-6">
-            <div class="text-center mb-16 reveal">
-                <p class="text-emerald-400 text-sm font-bold tracking-widest uppercase mb-4">FAQ</p>
-                <h2 class="text-4xl md:text-5xl font-black tracking-tight">Common questions.</h2>
+    <!-- Footer & Legal -->
+    <footer class="bg-gray-900 text-gray-400 py-12">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-3 gap-8">
+            <div>
+                <div class="flex items-center gap-2 mb-4 text-white">
+                    <div class="w-6 h-6 bg-emerald-500 rounded flex items-center justify-center font-bold text-sm">+</div>
+                    <span class="text-lg font-bold tracking-tight">stashRx</span>
+                </div>
+                <p class="text-sm leading-relaxed mb-4">An independent developer project providing fast, reliable operations journaling for Philippine pharmacies.</p>
+                <p class="text-xs">&copy; 2024 stashRx. All rights reserved.</p>
+            </div>
+            
+            <div>
+                <h4 class="text-white font-semibold mb-4">Terms of Service</h4>
+                <p class="text-xs leading-relaxed mb-2">stashRx is provided "as is" without warranty of any kind. The developer shall not be held liable for any data loss, hardware failure, or business interruption.</p>
+                <p class="text-xs leading-relaxed">The user is solely responsible for ensuring that all data inputs comply with the Philippine Data Privacy Act of 2012.</p>
             </div>
 
-            <div class="reveal">
-                <div class="faq-item py-5 cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-base font-semibold pr-4">Is my data safe if it's stored offline?</h3>
-                        <span class="faq-toggle text-emerald-400 text-xl font-light flex-shrink-0">+</span>
-                    </div>
-                    <div class="faq-answer text-gray-400 text-sm leading-relaxed pt-3">
-                        Yes. Your data is stored in your browser's IndexedDB &mdash; a secure, sandboxed database on your device. No one can access it remotely. We also provide export/import backup so you can save copies to your files or cloud drive of choice.
-                    </div>
-                </div>
-                <div class="faq-item py-5 cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-base font-semibold pr-4">Is stashRx a BIR-registered POS or CAS?</h3>
-                        <span class="faq-toggle text-emerald-400 text-xl font-light flex-shrink-0">+</span>
-                    </div>
-                    <div class="faq-answer text-gray-400 text-sm leading-relaxed pt-3">
-                        No. stashRx is designed strictly as a digital inventory and sales tracking aid. It is not a registered Computerized Accounting System (CAS) or Point of Sale (POS). Users should maintain their manual ledgers and official receipts as required by BIR.
-                    </div>
-                </div>
-                <div class="faq-item py-5 cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-base font-semibold pr-4">Can I use stashRx on multiple devices?</h3>
-                        <span class="faq-toggle text-emerald-400 text-xl font-light flex-shrink-0">+</span>
-                    </div>
-                    <div class="faq-answer text-gray-400 text-sm leading-relaxed pt-3">
-                        The Free version works on any device with a browser. Premium licenses are device-locked for security &mdash; each device needs its own license. You can transfer data between devices using the export/import backup feature.
-                    </div>
-                </div>
-                <div class="faq-item py-5 cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-base font-semibold pr-4">What happens if I clear my browser data?</h3>
-                        <span class="faq-toggle text-emerald-400 text-xl font-light flex-shrink-0">+</span>
-                    </div>
-                    <div class="faq-answer text-gray-400 text-sm leading-relaxed pt-3">
-                        Because stashRx is a Progressive Web App (PWA) that works entirely offline, your data is securely stored directly inside your browser. <strong class="text-white">If you manually clear your browser data or cache, your app data will be permanently deleted.</strong> Due to strict browser security sandboxing, web apps cannot automatically save or overwrite Excel files on your device in the background. To prevent data loss, you must regularly use the <strong>Export Backup</strong> feature to save a copy of your data.
-                    </div>
-                </div>
-                <div class="faq-item py-5 cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-base font-semibold pr-4">How do I add my inventory in bulk?</h3>
-                        <span class="faq-toggle text-emerald-400 text-xl font-light flex-shrink-0">+</span>
-                    </div>
-                    <div class="faq-answer text-gray-400 text-sm leading-relaxed pt-3">
-                        After installing, open the side menu inside the app and click <strong>Export Backup</strong> to get your blank database file. Open that file in Excel or Google Sheets, add all your items, save it, and then use the <strong>Import Backup</strong> button to instantly populate your stash!
-                    </div>
-                </div>
-                <div class="faq-item py-5 cursor-pointer border-b-0" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-base font-semibold pr-4">How does the SC/PWD discount calculation work?</h3>
-                        <span class="faq-toggle text-emerald-400 text-xl font-light flex-shrink-0">+</span>
-                    </div>
-                    <div class="faq-answer text-gray-400 text-sm leading-relaxed pt-3">
-                        stashRx automatically applies the legally mandated 20% discount for Senior Citizens and Persons with Disabilities on applicable items. Just toggle the SC/PWD option during checkout and the discount is computed instantly.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="border-t border-white/5 py-16">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
-                <div>
-                    <div class="text-2xl font-black tracking-tight text-white mb-2">
-                        stash<span class="text-emerald-400">Rx</span>
-                    </div>
-                    <p class="text-gray-500 text-sm">The offline pharmacy journal.</p>
-                </div>
-                <div class="flex gap-8 text-sm">
-                    <a href="#features" class="text-gray-400 hover:text-white transition">Features</a>
-                    <a href="#premium" class="text-gray-400 hover:text-white transition">Pricing</a>
-                    <a href="#faq" class="text-gray-400 hover:text-white transition">FAQ</a>
-                    <a href="mailto:orionv888@gmail.com" class="text-gray-400 hover:text-white transition">Support</a>
-                </div>
-            </div>
-            <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-gray-600 text-xs text-center md:text-left">stashRx is provided on an "as-is" basis and is NOT a registered Computerized Accounting System (CAS) or Point of Sale (POS).</p>
-                <p class="text-gray-600 text-xs flex-shrink-0">&copy; 2026 stashRx. All rights reserved.</p>
+            <div>
+                <h4 class="text-white font-semibold mb-4">Privacy Policy</h4>
+                <p class="text-xs leading-relaxed mb-2">We collect operational data (inventory, transactions) and registry data (SC/PWD IDs) solely for the purpose of the <strong>Silent Cloud Sync</strong> backup feature.</p>
+                <p class="text-xs leading-relaxed">Your data is secured in Google Cloud servers and is restricted to your unique Device ID. We do not sell, analyze, or distribute your pharmacy's private data to any third parties.</p>
             </div>
         </div>
     </footer>
 
-    <script>
-        /* Scroll reveal animation */
-        (function() {
-            var reveals = document.querySelectorAll('.reveal');
-            var observer = new IntersectionObserver(function(entries) {
-                entries.forEach(function(entry) {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
-
-            reveals.forEach(function(el, i) {
-                /* Stagger items in the same parent */
-                var siblings = el.parentElement.querySelectorAll('.reveal');
-                var idx = Array.prototype.indexOf.call(siblings, el);
-                el.style.transitionDelay = (idx * 0.1) + 's';
-                observer.observe(el);
-            });
-        })();
-
-        /* FAQ accordion */
-        function toggleFaq(item) {
-            var answer = item.querySelector('.faq-answer');
-            var toggle = item.querySelector('.faq-toggle');
-            var isOpen = answer.classList.contains('open');
-
-            /* Close all others */
-            document.querySelectorAll('.faq-answer.open').forEach(function(a) {
-                a.classList.remove('open');
-            });
-            document.querySelectorAll('.faq-toggle.open').forEach(function(t) {
-                t.classList.remove('open');
-            });
-
-            if (!isOpen) {
-                answer.classList.add('open');
-                toggle.classList.add('open');
-            }
-        }
-
-        /* Sticky nav shadow on scroll */
-        (function() {
-            var nav = document.querySelector('nav');
-            window.addEventListener('scroll', function() {
-                if (window.scrollY > 20) {
-                    nav.style.borderColor = 'rgba(255,255,255,0.08)';
-                } else {
-                    nav.style.borderColor = 'rgba(255,255,255,0.03)';
-                }
-            });
-        })();
-    </script>
-
-    <!-- Payment Modal -->
-    <div id="paymentModal" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-md" onclick="closePaymentModal()"></div>
-        <div class="relative bg-gray-900 border border-white/10 p-8 rounded-3xl w-full max-w-md mx-6 shadow-2xl transform scale-95 transition-transform duration-300" id="paymentModalContent">
-            <button onclick="closePaymentModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-            
-            <div class="text-center mb-6">
-                <div class="inline-block px-3 py-1 mb-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-widest uppercase">
-                    Premium License
-                </div>
-                <h3 class="text-3xl font-black text-white mb-1">&#8369;2,499</h3>
-                <p class="text-gray-400 text-sm">Valid for 1 Year</p>
-            </div>
-
-            <div class="bg-black/50 border border-white/5 rounded-2xl p-6 mb-6 text-center">
-                <div class="w-48 h-48 bg-gray-800 rounded-xl border-2 border-dashed border-gray-600 flex flex-col items-center justify-center mx-auto mb-4 relative overflow-hidden group">
-                    <!-- Placeholder for QR, we'll replace with actual image later -->
-                    <img id="qrImage" src="qr-code.png" alt="GCash QR" class="hidden absolute inset-0 w-full h-full object-cover">
-                    <svg class="text-gray-500 mb-2" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>
-                    <span class="text-xs text-gray-500 font-medium">QR Code Here</span>
-                </div>
-                <p class="text-white font-bold mb-1">Scan to Pay via GCash / QR Ph</p>
-                <p class="text-sm text-gray-400 mb-4">Or send directly to:</p>
-                <div class="flex items-center justify-between bg-gray-800 rounded-lg p-3">
-                    <span class="text-emerald-400 font-mono font-bold tracking-widest">0966 548 4698</span>
-                    <button class="text-xs font-bold text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition">Copy</button>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <h4 class="text-white font-bold text-sm">Next Steps:</h4>
-                <div class="flex gap-3 text-sm text-gray-400">
-                    <div class="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs">1</div>
-                    <p>Open stashRx app and copy your <b class="text-emerald-400">Device ID</b>.</p>
-                </div>
-                <div class="flex gap-3 text-sm text-gray-400">
-                    <div class="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs">2</div>
-                    <p>Email your payment screenshot and Device ID to <a href="mailto:orionv888@gmail.com" class="text-emerald-400 hover:underline font-medium">orionv888@gmail.com</a>.</p>
-                </div>
-                <div class="flex gap-3 text-sm text-gray-400">
-                    <div class="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 text-white font-bold text-xs">3</div>
-                    <p>We'll reply with your License Key within 12 hours to unlock Premium.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-<script>
-function openPaymentModal() {
-    const modal = document.getElementById("paymentModal") || document.querySelector(".iosModalOverlay");
-    if (modal) {
-        modal.style.display = "flex";
-        setTimeout(() => modal.classList.add("open"), 10);
-    }
-}
-function closePaymentModal() {
-    const modal = document.getElementById("paymentModal") || document.querySelector(".iosModalOverlay");
-    if (modal) {
-        modal.classList.remove("open");
-        setTimeout(() => modal.style.display = "none", 300);
-    }
-}
-</script>
 </body>
 </html>
