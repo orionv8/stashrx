@@ -124,35 +124,71 @@
 
     <!-- Pricing Section -->
     <section id="pricing" class="py-20 bg-gray-50">
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 class="text-3xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
-            <p class="text-gray-500 mb-10">No hardware to buy. No hidden fees. Just one affordable annual license.</p>
+            <p class="text-gray-500 mb-12">Start for free, upgrade when you're ready. No hardware to buy.</p>
             
-            <div class="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">PREMIUM</div>
-                <div class="text-5xl font-bold text-gray-900 mb-2">₱2,499<span class="text-lg text-gray-400 font-normal">/year</span></div>
-                <p class="text-gray-500 text-sm mb-8">Valid for one specific device.</p>
-                
-                <ul class="text-left space-y-4 mb-8 max-w-sm mx-auto">
-                    <li class="flex items-start gap-3 text-gray-700">
-                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        Unlimited Inventory Items
-                    </li>
-                    <li class="flex items-start gap-3 text-gray-700">
-                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        Silent Cloud Sync & Backup
-                    </li>
-                    <li class="flex items-start gap-3 text-gray-700">
-                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        Automated SC/PWD Computations
-                    </li>
-                    <li class="flex items-start gap-3 text-gray-700">
-                        <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        Expiration Tracking Dashboard
-                    </li>
-                </ul>
-                
-                <a href="app.html" class="block w-full bg-gray-900 hover:bg-gray-800 text-white py-3.5 rounded-xl font-semibold transition">Launch Journal</a>
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <!-- Free Tier -->
+                <div class="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm relative flex flex-col text-left">
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Free Version</h3>
+                    <div class="text-4xl font-bold text-gray-900 mb-2">₱0<span class="text-lg text-gray-400 font-normal">/forever</span></div>
+                    <p class="text-gray-500 text-sm mb-8 h-10">Perfect for trying out the journal and managing a small inventory.</p>
+                    
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li class="flex items-start gap-3 text-gray-600">
+                            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Up to 100 Inventory Items Limit
+                        </li>
+                        <li class="flex items-start gap-3 text-gray-600">
+                            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Manual Excel Backups only
+                        </li>
+                        <li class="flex items-start gap-3 text-gray-600">
+                            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Basic Operations Logging
+                        </li>
+                        <li class="flex items-start gap-3 text-gray-400 opacity-60">
+                            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            No Silent Cloud Sync
+                        </li>
+                        <li class="flex items-start gap-3 text-gray-400 opacity-60">
+                            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            No SC/PWD Auto-computations
+                        </li>
+                    </ul>
+                    
+                    <a href="app.html" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-900 py-3.5 rounded-xl font-semibold transition text-center mt-auto">Start Free</a>
+                </div>
+
+                <!-- Premium Tier -->
+                <div class="bg-white rounded-3xl p-8 border-2 border-emerald-500 shadow-xl relative flex flex-col text-left transform md:-translate-y-2">
+                    <div class="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">PREMIUM</div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Full License</h3>
+                    <div class="text-4xl font-bold text-gray-900 mb-2">₱2,499<span class="text-lg text-gray-400 font-normal">/year</span></div>
+                    <p class="text-gray-500 text-sm mb-8 h-10">Valid for one specific device. Full peace of mind included.</p>
+                    
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li class="flex items-start gap-3 text-gray-900">
+                            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <strong>Unlimited</strong> Inventory Items
+                        </li>
+                        <li class="flex items-start gap-3 text-gray-900">
+                            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <strong>Silent Cloud Sync & Backup</strong>
+                        </li>
+                        <li class="flex items-start gap-3 text-gray-900">
+                            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Automated SC/PWD Computations
+                        </li>
+                        <li class="flex items-start gap-3 text-gray-900">
+                            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Expiration Tracking Dashboard
+                        </li>
+                    </ul>
+                    
+                    <a href="app.html" class="block w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3.5 rounded-xl font-semibold transition shadow-lg shadow-emerald-500/30 text-center mt-auto">Upgrade Now</a>
+                </div>
             </div>
         </div>
     </section>
