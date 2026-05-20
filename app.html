@@ -1034,7 +1034,7 @@ localStorage.setItem = function(key, value) {
                 s1.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-app-compat.js";
                 s1.onload = () => {
                     const s2 = document.createElement('script');
-                    s2.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js";
+                    s2.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-storage-compat.js";
                     s2.onload = resolve;
                     document.head.appendChild(s2);
                 };
@@ -1043,7 +1043,7 @@ localStorage.setItem = function(key, value) {
             firebase.initializeApp(config);
         }
         
-        const fdb = firebase.firestore();
+        // const fdb = firebase.firestore(); // Removed for Storage API
         // Fallback to getDeviceID check
         let deviceId = "unknown";
         if (typeof getDeviceID === 'function') {
@@ -1064,13 +1064,17 @@ localStorage.setItem = function(key, value) {
                      cus = await db.customers.toArray();
                 }
                 
-                await fdb.collection('stashRx_Backups').doc(deviceId).set({
-                    lastSync: firebase.firestore.FieldValue.serverTimestamp(),
+                const backupPayload = JSON.stringify({
+                    lastSync: new Date().toISOString(),
                     inventory: JSON.stringify(inv),
                     sales: JSON.stringify(sal),
                     expenses: JSON.stringify(exp),
                     customers: JSON.stringify(cus)
                 });
+                
+                const storageRef = firebase.storage().ref();
+                const backupRef = storageRef.child('backups/' + deviceId + '.json');
+                await backupRef.putString(backupPayload, 'raw', { contentType: 'application/json' });
                 console.log("Cloud sync successful at " + new Date().toLocaleTimeString());
             } catch(syncErr) {
                 console.error("Silent cloud sync failed:", syncErr);
@@ -1095,16 +1099,18 @@ localStorage.setItem = function(key, value) {
 
         try {
             const deviceId = getDeviceID();
-            const fdb = firebase.firestore();
-            const docRef = fdb.collection('stashRx_Backups').doc(deviceId);
-            const doc = await docRef.get();
-
-            if (!doc.exists) {
+            const storageRef = firebase.storage().ref();
+            const backupRef = storageRef.child('backups/' + deviceId + '.json');
+            
+            let backupData;
+            try {
+                const url = await backupRef.getDownloadURL();
+                const response = await fetch(url);
+                backupData = await response.json();
+            } catch(err) {
                 iosAlert("No cloud backup could be found for this Device ID.", "Error");
                 return;
             }
-
-            const backupData = doc.data();
 
             await db.transaction('rw', db.inventory, db.sales, db.expenses, db.customers, async () => {
                 await db.inventory.clear();
