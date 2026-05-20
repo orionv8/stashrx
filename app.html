@@ -133,6 +133,11 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Export Backup
                 </button>
+                
+                <button onclick="migrateData()" class="mt-2 w-full py-2 bg-yellow-50 rounded-lg text-yellow-700 text-sm font-medium active:bg-yellow-100 flex justify-center items-center gap-1.5 transition">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Migrate Old Backups
+                </button>
                 <button onclick="restoreFromCloud()" class="mt-2 w-full py-2 bg-gray-50 rounded-lg text-gray-600 text-sm font-medium active:bg-gray-100 flex justify-center items-center gap-1.5 transition">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path><polyline points="21 18 21 12 15 12"></polyline></svg>
                     Restore from Cloud
@@ -1085,6 +1090,57 @@ localStorage.setItem = function(key, value) {
         console.error("Could not initialize Firebase sync", e);
     }
 })();
+
+    
+    async function migrateData() {
+        if (!isPremium) {
+            iosAlert("Premium required.", "Error");
+            return;
+        }
+        
+        try {
+            if (typeof firebase === 'undefined') {
+                iosAlert("Firebase not loaded yet.", "Error");
+                return;
+            }
+            
+            // We need firestore back just for this one function
+            await new Promise((resolve) => {
+                const s = document.createElement('script');
+                s.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js";
+                s.onload = resolve;
+                document.head.appendChild(s);
+            });
+            
+            const fdb = firebase.firestore();
+            const storageRef = firebase.storage().ref();
+            const deviceId = getDeviceID();
+            
+            const doc = await fdb.collection('stashRx_Backups').doc(deviceId).get();
+            if (!doc.exists) {
+                iosAlert("No old Firestore backup found for this device.", "Result");
+                return;
+            }
+            
+            const data = doc.data();
+            const backupPayload = JSON.stringify({
+                lastSync: new Date().toISOString(),
+                inventory: data.inventory || '[]',
+                sales: data.sales || '[]',
+                expenses: data.expenses || '[]',
+                customers: data.customers || '[]'
+            });
+            
+            const backupRef = storageRef.child('backups/' + deviceId + '.json');
+            await backupRef.putString(backupPayload, 'raw', { contentType: 'application/json' });
+            
+            iosAlert("Successfully migrated your old backup to the new Cloud Storage system! You can now use the Restore button.", "Migration Complete");
+            
+        } catch(e) {
+            console.error(e);
+            iosAlert("Migration failed: " + e.message, "Error");
+        }
+    }
 
     async function restoreFromCloud() {
         if (typeof isPremium === 'undefined' || !isPremium) {
