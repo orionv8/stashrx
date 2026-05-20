@@ -1184,6 +1184,31 @@ localStorage.setItem = function(key, value) {
         }
     }
 
+
+    function showSettingsModal() {
+        const overlay = document.getElementById('settingsModal');
+        const card = document.getElementById('settingsModalCard');
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        
+        // Trigger reflow
+        void overlay.offsetWidth;
+        
+        card.classList.remove('translate-y-full');
+    }
+
+    function closeSettingsModal() {
+        const overlay = document.getElementById('settingsModal');
+        const card = document.getElementById('settingsModalCard');
+        
+        card.classList.add('translate-y-full');
+        
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }, 300);
+    }
+
 </script>
 
 
@@ -1265,6 +1290,6 @@ localStorage.setItem = function(key, value) {
             </div>
         </div>
     </div>
-\n</body>
+</body>
 
 </html>
