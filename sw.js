@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stashRx-v24';
+const CACHE_NAME = 'stashRx-v26';
 const ASSETS = [
   '/stashrx/',
   '/stashrx/index.html',
