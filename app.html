@@ -129,10 +129,6 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     Import Inventory
                 </button>
-                <button onclick="promptFirebaseConfig()" class="w-full py-2 bg-emerald-50 rounded-lg text-emerald-600 text-sm font-medium active:bg-emerald-100 flex justify-center items-center gap-1.5 transition mb-3">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    Cloud Sync Setup
-                </button>
                 <button onclick="exportData()" class="w-full py-2 bg-gray-50 rounded-lg text-gray-600 text-sm font-medium active:bg-gray-100 flex justify-center items-center gap-1.5 transition">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Export Backup
@@ -989,33 +985,6 @@ localStorage.setItem = function(key, value) {
 // --- CLOUD SYNC LOGIC ---
 const FIREBASE_CONFIG_KEY = "stashRx_firebase_config";
 
-async function promptFirebaseConfig() {
-    let currentConfig = localStorage.getItem(FIREBASE_CONFIG_KEY) || "";
-    let msg = `
-        <div class="text-left text-sm mb-4 text-gray-600">
-            <p class="mb-2"><strong>Enable Silent Cloud Sync</strong></p>
-            <p class="mb-2">To back up your data silently in the background, enter your Firebase configuration object (JSON format) below.</p>
-            <p class="text-xs">If you don't have one, leave this blank to continue using local storage only.</p>
-        </div>
-    `;
-    let newConfig = await iosPrompt(msg, currentConfig, "Cloud Sync Setup");
-    if (newConfig !== null) {
-        if (newConfig.trim() === "") {
-            localStorage.removeItem(FIREBASE_CONFIG_KEY);
-            iosAlert("Cloud sync disabled. Operating in local-only mode.", "Cloud Sync");
-        } else {
-            try {
-                // Remove javascript syntax if they copied it with const firebaseConfig =
-                let cleanConfig = newConfig.replace(/const\s+.*=\s*/, '').replace(/;/g, '');
-                JSON.parse(cleanConfig);
-                localStorage.setItem(FIREBASE_CONFIG_KEY, cleanConfig);
-                iosAlert("Firebase config saved! Reload the app to initialize sync.", "Success");
-            } catch(e) {
-                iosAlert("Invalid JSON format. Please ensure you only paste the JSON object starting with { and ending with }.", "Error");
-            }
-        }
-    }
-}
 
 // Background sync loop
 (async function() {
