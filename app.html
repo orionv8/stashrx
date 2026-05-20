@@ -1023,6 +1023,7 @@ localStorage.setItem = function(key, value) {
         // Sync every 5 minutes if online
         setInterval(async () => {
             if (!navigator.onLine) return;
+            if (typeof isPremium !== 'undefined' && !isPremium) return;
             
             try {
                 const inv = await db.inventory.toArray();
