@@ -897,10 +897,9 @@ window.exportData = async function() {
         const expenses = await db.expenses.toArray();
         const customers = await db.customers.toArray();
         
-        const systemConfig = [
-            { key: 'stashRx_deviceID', value: localStorage.getItem('stashRx_deviceID') || '' },
-            { key: 'stashRx_license', value: localStorage.getItem('stashRx_license') || '' }
-        ];
+        const systemConfig = [];
+        // Premium credentials (license, deviceID) excluded from export
+        // to prevent premium transfer via shared backups
 
         const processedSales = sales.map(s => {
             return {
@@ -1278,7 +1277,31 @@ window.handleImport = async function(event) {
     }
 
 
-// Serverless override removed — using obfuscated crypto validation
+// showPremiumModal — manual license key entry
+async function showPremiumModal() {
+    const deviceID = getDeviceID();
+    const existingKey = localStorage.getItem("stashRx_license") || "";
+    const instructions = \`
+        <div class="text-left text-sm mb-4 text-gray-600">
+            <p class="mb-2">You are using the free version with a <strong>100 item inventory limit</strong>.</p>
+            <p class="bg-gray-100 p-2 rounded font-mono text-center mb-3">Device ID: <b class="text-emerald-600 select-all">\${deviceID}</b></p>
+            <p class="mb-2">To unlock, enter your license key below:</p>
+            <p class="text-xs">For premium access, <a href="mailto:orionv888@gmail.com" class="text-emerald-500 underline font-bold">contact us</a>.</p>
+        </div>
+    \`;
+    const key = await iosPrompt(instructions, existingKey, "stashRx Premium");
+    if (key) {
+        const isValid = await validateLicenseKey(key);
+        if (isValid) {
+            localStorage.setItem("stashRx_license", key);
+            isPremium = true;
+            updatePremiumUI();
+            iosAlert("Premium License Activated! All limits removed.", "Success");
+        } else {
+            iosAlert("Invalid License Key. Please check and try again.", "Error");
+        }
+    }
+}
 
 </script>
 
