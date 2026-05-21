@@ -145,7 +145,7 @@
                     </nav>
                     
                     <div class="p-4 border-t border-gray-100 space-y-2 pb-6">
-                        <input type="file" id="importFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleImport(event)">
+                        <input type="file" id="importFile" accept=".xlsx, .xls, .csv" class="hidden">
                         
                         <!-- Bottom Links -->
                         <div class="mt-6 w-full flex flex-col items-center space-y-2">
@@ -1140,6 +1140,59 @@ function getSheetCaseInsensitive(workbook, name) {
     // Also set window.handleImport so the HTML attribute resolves to our version
     // (redundant with capture-phase, but covers edge cases)
     window.handleImport = _secureHandleImport;
+})();
+
+// =======================================================================
+// LAYER 4: Dexie-level database guard — the ULTIMATE backstop
+// =======================================================================
+// No matter which handler runs or how items get imported, this ensures
+// db.inventory.bulkAdd never writes more than 100 items for free users.
+// This is immune to event handler races, function overrides, and timing.
+(function() {
+    'use strict';
+    function patchBulkAdd() {
+        if (typeof db !== 'undefined' && db.inventory && db.inventory.bulkAdd) {
+            var _origBulkAdd = db.inventory.bulkAdd.bind(db.inventory);
+            db.inventory.bulkAdd = function(items) {
+                if (typeof isPremium !== 'undefined' && !isPremium && items && items.length > 100) {
+                    console.warn('[stashRx] DB guard: truncating ' + items.length + ' items to 100 (free tier)');
+                    items = items.slice(0, 100);
+                }
+                return _origBulkAdd(items);
+            };
+            console.log('[stashRx] DB guard installed on db.inventory.bulkAdd');
+            return true;
+        }
+        return false;
+    }
+    // Try immediately (db should exist since obfuscated script already ran)
+    if (!patchBulkAdd()) {
+        // Retry after short delays in case db is initialized async
+        setTimeout(patchBulkAdd, 100);
+        setTimeout(patchBulkAdd, 500);
+        setTimeout(patchBulkAdd, 1500);
+    }
+
+    // Also patch bulkPut just in case
+    function patchBulkPut() {
+        if (typeof db !== 'undefined' && db.inventory && db.inventory.bulkPut) {
+            var _origBulkPut = db.inventory.bulkPut.bind(db.inventory);
+            db.inventory.bulkPut = function(items) {
+                if (typeof isPremium !== 'undefined' && !isPremium && items && items.length > 100) {
+                    console.warn('[stashRx] DB guard: truncating ' + items.length + ' items to 100 (free tier)');
+                    items = items.slice(0, 100);
+                }
+                return _origBulkPut(items);
+            };
+            return true;
+        }
+        return false;
+    }
+    if (!patchBulkPut()) {
+        setTimeout(patchBulkPut, 100);
+        setTimeout(patchBulkPut, 500);
+        setTimeout(patchBulkPut, 1500);
+    }
 })();
 </script>
 
