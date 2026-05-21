@@ -1320,37 +1320,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // =======================================================================
-// SECURE LICENSE SYSTEM (Serverless + Local Fallback)
+// SECURE LICENSE SYSTEM v2 — Authenticated + Whitelist
 // =======================================================================
+// Security layers:
+//   1. HMAC-signed requests (prevents unauthorized API calls)
+//   2. Server-side device whitelist (only approved devices get keys)
+//   3. Cryptographic key validation (no more length-only fallback)
+//   4. Trusted key storage (server-verified keys cached for offline use)
+//
 // Uses the existing global isPremium — do NOT redeclare it.
-// Supports two flows:
-//   1. Server flow: fetch license from Cloud Run endpoint
-//   2. Manual flow: user enters a key (validated against SECRET_SALT)
 
-// --- Fetch license from Cloud Run endpoint ---
+var LICENSE_ENDPOINT = "https://generate-license-cpmhktrscq-as.a.run.app";
+
+// HMAC signing key — must match HMAC_SECRET on the server.
+// Replace this value after deploying the new server.
+var APP_HMAC_KEY = "PLACEHOLDER_REPLACE_WITH_HMAC_SECRET";
+
+// --- HMAC-SHA256 helper (Web Crypto API) ---
+async function computeHMAC(message, key) {
+    var encoder = new TextEncoder();
+    var keyData = encoder.encode(key);
+    var msgData = encoder.encode(message);
+    var cryptoKey = await crypto.subtle.importKey(
+        "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    var sigBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+    var sigArray = Array.from(new Uint8Array(sigBuffer));
+    return sigArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
+}
+
+// --- Fetch license from Cloud Run (HMAC-authenticated) ---
 async function getAndValidateLicense(deviceId) {
     try {
-        const response = await fetch("https://generate-license-cpmhktrscq-as.a.run.app", {
+        var timestamp = Math.floor(Date.now() / 1000);
+        var signature = await computeHMAC(deviceId + "|" + timestamp, APP_HMAC_KEY);
+
+        var response = await fetch(LICENSE_ENDPOINT, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ deviceId: deviceId })
+            body: JSON.stringify({
+                deviceId: deviceId,
+                timestamp: timestamp,
+                signature: signature
+            })
         });
-        if (!response.ok) return false;
-        const data = await response.json();
-        if (data.licenseKey) {
-            // Validate format before trusting
-            var valid = await validateLicenseKey(data.licenseKey);
-            return valid ? data.licenseKey : false;
+
+        var data = await response.json();
+
+        if (!response.ok) {
+            // Return the server error message for user feedback
+            return { error: data.error || "Server error", key: false };
         }
-        return false;
+
+        if (data.licenseKey) {
+            // Basic format validation before trusting
+            var parts = data.licenseKey.split('-');
+            if (parts.length === 3 && parts[0] === deviceId && /^\d{8}$/.test(parts[1]) && /^[0-9A-Fa-f]{64}$/.test(parts[2])) {
+                // Mark as server-verified (trusted for offline validation)
+                localStorage.setItem("stashRx_license_trusted", data.licenseKey);
+                return { error: null, key: data.licenseKey };
+            }
+        }
+        return { error: "Invalid key received from server", key: false };
     } catch (e) {
         console.error("[stashRx] License fetch failed:", e);
-        return false;
+        return { error: "Could not reach license server. Check your connection.", key: false };
     }
 }
 
-// --- Validate a license key (supports both server and local keys) ---
-// Overrides the obfuscated validateLicenseKey with proper checks.
+// --- Validate a license key (cryptographic, no length-only fallback) ---
 window.validateLicenseKey = async function(key) {
     if (!key || typeof key !== 'string') return false;
 
@@ -1377,7 +1415,7 @@ window.validateLicenseKey = async function(key) {
     // Signature must be hex
     if (!/^[0-9A-Fa-f]+$/.test(keySig)) return false;
 
-    // Try cryptographic validation against known SECRET_SALT (local keys)
+    // Path 1: Local keys — cryptographic validation against SECRET_SALT
     try {
         var textToHash = keyDeviceId + '|' + keyExpiry + '|' + SECRET_SALT;
         var encoder = new TextEncoder();
@@ -1387,7 +1425,6 @@ window.validateLicenseKey = async function(key) {
         var fullHash = hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
         var shortHash = fullHash.substring(0, 16);
 
-        // Match against local salt (16-char or full hash)
         if (keySig.toUpperCase() === shortHash || keySig.toUpperCase() === fullHash) {
             return true;
         }
@@ -1395,11 +1432,33 @@ window.validateLicenseKey = async function(key) {
         console.error("[stashRx] Local validation error:", e);
     }
 
-    // For server-generated keys: the Cloud Run endpoint uses a different salt,
-    // so we accept keys that pass all format/device/expiry checks above
-    // and have a valid signature length (16 or 64 hex chars).
-    if (keySig.length === 16 || keySig.length === 64) {
+    // Path 2: Server keys — check trusted storage (populated by getAndValidateLicense)
+    // This replaces the old length-only fallback with a proper trust chain.
+    var trustedKey = localStorage.getItem("stashRx_license_trusted");
+    if (trustedKey && trustedKey === key) {
         return true;
+    }
+
+    // Path 3: If online, try server-side validation as last resort
+    if (keySig.length === 64) {
+        try {
+            var valResponse = await fetch(LICENSE_ENDPOINT + "/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ licenseKey: key })
+            });
+            if (valResponse.ok) {
+                var valData = await valResponse.json();
+                if (valData.valid) {
+                    // Cache as trusted for future offline use
+                    localStorage.setItem("stashRx_license_trusted", key);
+                    return true;
+                }
+            }
+        } catch(e) {
+            // Offline — can't validate server key without trusted cache
+            console.warn("[stashRx] Offline, cannot validate server key");
+        }
     }
 
     return false;
@@ -1416,6 +1475,7 @@ window.checkPremiumStatus = async function() {
             // Key is invalid or expired — revoke premium
             isPremium = false;
             localStorage.removeItem("stashRx_license");
+            localStorage.removeItem("stashRx_license_trusted");
         }
     } else {
         isPremium = false;
@@ -1449,18 +1509,23 @@ window.showPremiumModal = async function() {
     var doFetch = await iosConfirm(instructions, "Unlock Premium");
 
     if (doFetch) {
-        // Try server-side license generation
+        // Try server-side license generation (HMAC-authenticated)
         iosAlert("Contacting license server...", "Please Wait");
-        var key = await getAndValidateLicense(deviceID);
-        if (key) {
-            localStorage.setItem("stashRx_license", key);
+        var result = await getAndValidateLicense(deviceID);
+        if (result.key) {
+            localStorage.setItem("stashRx_license", result.key);
             isPremium = true;
             if (typeof updatePremiumUI === 'function') updatePremiumUI();
             iosAlert("Premium License Activated! All limits removed.", "Success");
             return;
         } else {
-            // Server failed — offer manual entry
-            iosAlert("Could not reach the license server. You can enter a key manually.", "Server Unavailable");
+            // Show specific error from server
+            var errorMsg = result.error || "Unknown error";
+            if (errorMsg.includes("not approved")) {
+                iosAlert("Your device is not yet approved for premium. Send your Device ID to orionv888@gmail.com to request access.", "Not Approved");
+            } else {
+                iosAlert(errorMsg + "\n\nYou can also enter a key manually.", "Activation Failed");
+            }
         }
     }
 
