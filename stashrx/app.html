@@ -1758,15 +1758,8 @@ var LICENSE_ENDPOINT = "https://generate-license-cpmhktrscq-as.a.run.app";
 
 // HMAC signing key — must match HMAC_SECRET on the server.
 // Replace this value after deploying the new server.
-var APP_HMAC_KEY = "PLACEHOLDER_REPLACE_WITH_HMAC_SECRET";
-
 // --- HMAC-SHA256 helper (Web Crypto API) ---
-async function computeHMAC(message, key) {
-    var encoder = new TextEncoder();
-    var keyData = encoder.encode(key);
-    var msgData = encoder.encode(message);
-    var cryptoKey = await crypto.subtle.importKey(
-        "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+, false, ["sign"]
     );
     var sigBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
     var sigArray = Array.from(new Uint8Array(sigBuffer));
@@ -1776,16 +1769,11 @@ async function computeHMAC(message, key) {
 // --- Fetch license from Cloud Run (HMAC-authenticated) ---
 async function getAndValidateLicense(deviceId) {
     try {
-        var timestamp = Math.floor(Date.now() / 1000);
-        var signature = await computeHMAC(deviceId + "|" + timestamp, APP_HMAC_KEY);
-
         var response = await fetch(LICENSE_ENDPOINT, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                deviceId: deviceId,
-                timestamp: timestamp,
-                signature: signature
+                deviceId: deviceId
             })
         });
 
