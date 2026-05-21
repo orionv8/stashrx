@@ -1340,15 +1340,8 @@ var LICENSE_ENDPOINT = "https://generate-license-330835001360.asia-southeast1.ru
 
 // HMAC signing key — must match HMAC_SECRET on the server.
 // Replace this value after deploying the new server.
-var APP_HMAC_KEY = "a6754d4e533f9d809301d22ac86dfc4dde2d5081a232c7bccd10aea100ca4bef";
-
 // --- HMAC-SHA256 helper (Web Crypto API) ---
-async function computeHMAC(message, key) {
-    var encoder = new TextEncoder();
-    var keyData = encoder.encode(key);
-    var msgData = encoder.encode(message);
-    var cryptoKey = await crypto.subtle.importKey(
-        "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+, false, ["sign"]
     );
     var sigBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
     var sigArray = Array.from(new Uint8Array(sigBuffer));
@@ -1358,16 +1351,11 @@ async function computeHMAC(message, key) {
 // --- Fetch license from Cloud Run (HMAC-authenticated) ---
 async function getAndValidateLicense(deviceId) {
     try {
-        var timestamp = Math.floor(Date.now() / 1000);
-        var signature = await computeHMAC(deviceId + "|" + timestamp, APP_HMAC_KEY);
-
         var response = await fetch(LICENSE_ENDPOINT, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                deviceId: deviceId,
-                timestamp: timestamp,
-                signature: signature
+                deviceId: deviceId
             })
         });
 
@@ -1495,7 +1483,12 @@ window.showPremiumModal = async function() {
         </div>
     `;
 
-    var doFetch = await iosConfirm(instructions, "Unlock Premium");
+    var doFetch = await showIosModal({
+        title: "Unlock Premium",
+        message: instructions,
+        type: a0_0x37c2a9(0x1ff), // 'confirm'
+        confirmText: "Activate"
+    });
 
     if (doFetch) {
         // Try server-side license generation (HMAC-authenticated)
@@ -1519,20 +1512,33 @@ window.showPremiumModal = async function() {
     }
 
     // Manual key entry fallback
-    var manualKey = await iosPrompt(
-        '<div class="text-left text-sm mb-2 text-gray-600">Enter your license key below:</div>',
-        existingKey,
-        "Manual License Entry"
-    );
-    if (manualKey) {
+    while (true) {
+        var manualKey = await showIosModal({
+            title: "Manual License Entry",
+            message: '<div class="text-left text-sm mb-2 text-gray-600">Enter your license key below:</div>',
+            type: a0_0x37c2a9(0x1a9), // prompt
+            defaultValue: existingKey,
+            confirmText: "Activate"
+        });
+        
+        if (manualKey === null) {
+            break;
+        }
+        
+        if (!manualKey.trim()) {
+            continue;
+        }
+
         var isValid = await validateLicenseKey(manualKey);
         if (isValid) {
             localStorage.setItem("stashRx_license", manualKey);
             isPremium = true;
             if (typeof updatePremiumUI === 'function') updatePremiumUI();
             iosAlert("Premium License Activated! All limits removed.", "Success");
+            break;
         } else {
-            iosAlert("Invalid License Key. Check that it matches your Device ID and hasn't expired.", "Error");
+            await iosAlert("Invalid License Key. Check that it matches your Device ID and hasn't expired.", "Error");
+            existingKey = manualKey;
         }
     }
 };
