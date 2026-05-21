@@ -943,151 +943,203 @@ function getSheetCaseInsensitive(workbook, name) {
     return sheetName ? workbook.Sheets[sheetName] : null;
 }
 
-// Override Import Data to read all tables robustly
-// IMPORTANT: This override MUST use window.handleImport AND redefine
-// the onchange handler to guarantee it takes precedence over the
-// obfuscated handleImport function declaration.
-window.handleImport = async function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-            
-            // SECURITY: Save premium state BEFORE import to prevent overwrite
-            const savedLicense = localStorage.getItem('stashRx_license');
-            const savedDeviceId = localStorage.getItem('stashRx_deviceID');
-            
-            // Legacy fallback: if there is only 1 sheet and it's not named one of the known tables,
-            // assume it's the inventory.
-            const isLegacy = workbook.SheetNames.length === 1 && 
-                            !['inventory', 'sales', 'expenses', 'customers', 'system_config'].includes(workbook.SheetNames[0].toLowerCase());
-            
-            // System_Config tab is intentionally SKIPPED entirely.
-            // Premium credentials must never be imported from external files.
-            
-            const invSheet = isLegacy ? workbook.Sheets[workbook.SheetNames[0]] : getSheetCaseInsensitive(workbook, 'inventory');
-            if (invSheet) {
-                let invData = XLSX.utils.sheet_to_json(invSheet);
-                let validInv = invData.filter(i => i.id !== undefined && i.id !== '');
-                validInv = validInv.map(i => {
-                    return {
-                        ...i,
-                        id: parseInt(i.id),
-                        stock: parseFloat(i.stock) || 0,
-                        price: parseFloat(i.price) || 0,
-                        exp: i.exp instanceof Date ? 
-                             (String(i.exp.getMonth()+1).padStart(2,'0') + '/' + i.exp.getFullYear()) : 
-                             String(i.exp || '')
-                    };
-                }).filter(i => !isNaN(i.id));
-                
-                // Enforce 100-item inventory limit for free users
-                if (!isPremium && validInv.length > 100) {
-                    validInv = validInv.slice(0, 100);
-                    if (typeof iosAlert !== 'undefined') {
-                        iosAlert('Free version is limited to 100 inventory items. Only the first 100 were imported. Upgrade to Premium for unlimited items.', 'Limit Reached');
-                    }
-                }
-                if (validInv.length) {
-                    await db.inventory.clear();
-                    await db.inventory.bulkAdd(validInv);
-                }
-            }
-            
-            const salesSheet = getSheetCaseInsensitive(workbook, 'sales');
-            if (salesSheet) {
-                let salesData = XLSX.utils.sheet_to_json(salesSheet);
-                let validSales = salesData.filter(s => s.id !== undefined && s.id !== '');
-                let processed = validSales.map(s => {
-                    if (s.items && typeof s.items === 'string') {
-                        try { s.items = JSON.parse(s.items); } catch(err) { s.items = []; }
-                    }
-                    if (s.discountDetails && typeof s.discountDetails === 'string') {
-                        try { s.discountDetails = JSON.parse(s.discountDetails); } catch(err) { s.discountDetails = {}; }
-                    }
-                    return {
-                        ...s,
-                        id: parseInt(s.id),
-                        total: parseFloat(s.total) || 0
-                    };
-                }).filter(s => !isNaN(s.id));
-                if (processed.length) {
-                    await db.sales.clear();
-                    await db.sales.bulkAdd(processed);
-                }
-            }
-            
-            const expSheet = getSheetCaseInsensitive(workbook, 'expenses');
-            if (expSheet) {
-                let expData = XLSX.utils.sheet_to_json(expSheet);
-                let validExp = expData.filter(e => e.id !== undefined && e.id !== '');
-                validExp = validExp.map(e => ({
-                    ...e,
-                    id: parseInt(e.id),
-                    amount: parseFloat(e.amount) || 0
-                })).filter(e => !isNaN(e.id));
-                if (validExp.length) {
-                    await db.expenses.clear();
-                    await db.expenses.bulkAdd(validExp);
-                }
-            }
-            
-            const cusSheet = getSheetCaseInsensitive(workbook, 'customers');
-            if (cusSheet) {
-                let cusData = XLSX.utils.sheet_to_json(cusSheet);
-                let validCus = cusData.filter(c => c.idNumber !== undefined && c.idNumber !== '');
-                validCus = validCus.map(c => ({
-                    ...c,
-                    idNumber: String(c.idNumber)
-                }));
-                if (validCus.length) {
-                    await db.customers.clear();
-                    await db.customers.bulkAdd(validCus);
-                }
-            }
-            
-            // SECURITY: Restore premium state — no Excel file can change it
-            if (savedDeviceId) localStorage.setItem('stashRx_deviceID', savedDeviceId);
-            else localStorage.removeItem('stashRx_deviceID');
-            if (savedLicense) localStorage.setItem('stashRx_license', savedLicense);
-            else localStorage.removeItem('stashRx_license');
-            
-            if(typeof loadInventory === 'function') await loadInventory();
-            if(typeof updateDashboardStats === 'function') await updateDashboardStats();
-            if(typeof renderInventoryStatus === 'function') await renderInventoryStatus();
-            if(typeof checkPremiumStatus === 'function') await checkPremiumStatus();
-            
-            if(typeof iosAlert !== 'undefined') iosAlert('Import completed successfully! Refresh the page if some lists do not update.', 'Success');
-            else alert('Import completed successfully! Refresh the page to see changes.');
-        } catch(err) {
-            console.error(err);
-            if(typeof iosAlert !== 'undefined') iosAlert('Import failed: ' + err.message, 'Error');
-            else alert('Import failed: ' + err.message);
-        }
-    };
-    reader.readAsArrayBuffer(file);
-    // Reset the file input so the same file can be re-imported
-    event.target.value = '';
-    event.target.value = ''; // reset file input
-};
-
-// Force-bind our secure handleImport to the file input element
-// Guarantees our version runs even if the obfuscated code has its own handleImport
+// =======================================================================
+// SECURE IMPORT HANDLER — Capture-phase event interception
+// =======================================================================
+// The obfuscated code declares its own handleImport that calls processImportedData.
+// Previous approach (rebinding el.onchange) failed because BOTH handlers fired.
+// This fix uses a CAPTURE-PHASE listener on the document, which fires BEFORE the
+// event ever reaches the <input> element. We stop propagation so the obfuscated
+// handler never sees the event. Belt-and-suspenders: we also neuter
+// processImportedData so even if the obfuscated handler somehow fires, it's a no-op.
 (function() {
-    function rebindImport() {
+    'use strict';
+
+    // --- Layer 1: Capture-phase interception ---
+    // Fires on document BEFORE the event reaches the input element.
+    // stopPropagation + stopImmediatePropagation = nothing else sees this event.
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'importFile') {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            _secureHandleImport(e);
+        }
+    }, true); // true = capture phase
+
+    // --- Layer 2: Neuter the obfuscated processImportedData ---
+    // The obfuscated handleImport delegates to processImportedData.
+    // If somehow the obfuscated handler still fires, this prevents it from
+    // writing any data to the database.
+    function neuterProcessImportedData() {
+        if (typeof processImportedData === 'function') {
+            window.processImportedData = async function() {
+                console.warn('[stashRx] processImportedData blocked — secure import handler active');
+                return;
+            };
+        }
+    }
+    // Neuter immediately and again after DOM loads (obfuscated code may define it late)
+    neuterProcessImportedData();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', neuterProcessImportedData);
+    }
+    setTimeout(neuterProcessImportedData, 1000);
+    setTimeout(neuterProcessImportedData, 3000);
+
+    // --- Layer 3: Remove the HTML onchange attribute entirely ---
+    // The HTML has onchange="handleImport(event)" which could bypass our capture.
+    // Removing the attribute eliminates that vector.
+    function stripOnchangeAttr() {
         var el = document.getElementById('importFile');
-        if (el) el.onchange = window.handleImport;
+        if (el) {
+            el.removeAttribute('onchange');
+            el.onchange = null;
+        }
     }
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', rebindImport);
+        document.addEventListener('DOMContentLoaded', stripOnchangeAttr);
     } else {
-        rebindImport();
+        stripOnchangeAttr();
     }
-    setTimeout(rebindImport, 2000); // fallback for late-loading
+    setTimeout(stripOnchangeAttr, 500);
+    setTimeout(stripOnchangeAttr, 2000);
+
+    // --- The secure import handler ---
+    async function _secureHandleImport(event) {
+        var file = event.target.files[0];
+        if (!file) return;
+
+        // Immediately clear the input so no other handler can read the file
+        event.target.value = '';
+
+        var reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                var data = new Uint8Array(e.target.result);
+                var workbook = XLSX.read(data, {type: 'array', cellDates: true});
+
+                // SECURITY: Save premium state BEFORE import to prevent overwrite
+                var savedLicense = localStorage.getItem('stashRx_license');
+                var savedDeviceId = localStorage.getItem('stashRx_deviceID');
+
+                // Legacy fallback: if there is only 1 sheet and it's not named one of the known tables,
+                // assume it's the inventory.
+                var isLegacy = workbook.SheetNames.length === 1 &&
+                    !['inventory', 'sales', 'expenses', 'customers', 'system_config'].includes(workbook.SheetNames[0].toLowerCase());
+
+                // System_Config tab is intentionally SKIPPED entirely.
+                // Premium credentials must never be imported from external files.
+
+                var invSheet = isLegacy ? workbook.Sheets[workbook.SheetNames[0]] : getSheetCaseInsensitive(workbook, 'inventory');
+                if (invSheet) {
+                    var invData = XLSX.utils.sheet_to_json(invSheet);
+                    var validInv = invData.filter(function(i) { return i.id !== undefined && i.id !== ''; });
+                    validInv = validInv.map(function(i) {
+                        return {
+                            ...i,
+                            id: parseInt(i.id),
+                            stock: parseFloat(i.stock) || 0,
+                            price: parseFloat(i.price) || 0,
+                            exp: i.exp instanceof Date ?
+                                (String(i.exp.getMonth()+1).padStart(2,'0') + '/' + i.exp.getFullYear()) :
+                                String(i.exp || '')
+                        };
+                    }).filter(function(i) { return !isNaN(i.id); });
+
+                    // *** ENFORCE 100-ITEM INVENTORY LIMIT FOR FREE USERS ***
+                    if (!isPremium && validInv.length > 100) {
+                        validInv = validInv.slice(0, 100);
+                        if (typeof iosAlert !== 'undefined') {
+                            iosAlert('Free version is limited to 100 inventory items. Only the first 100 were imported. Upgrade to Premium for unlimited items.', 'Limit Reached');
+                        }
+                    }
+                    if (validInv.length) {
+                        await db.inventory.clear();
+                        await db.inventory.bulkAdd(validInv);
+                    }
+                }
+
+                var salesSheet = getSheetCaseInsensitive(workbook, 'sales');
+                if (salesSheet) {
+                    var salesData = XLSX.utils.sheet_to_json(salesSheet);
+                    var validSales = salesData.filter(function(s) { return s.id !== undefined && s.id !== ''; });
+                    var processed = validSales.map(function(s) {
+                        if (s.items && typeof s.items === 'string') {
+                            try { s.items = JSON.parse(s.items); } catch(err) { s.items = []; }
+                        }
+                        if (s.discountDetails && typeof s.discountDetails === 'string') {
+                            try { s.discountDetails = JSON.parse(s.discountDetails); } catch(err) { s.discountDetails = {}; }
+                        }
+                        return {
+                            ...s,
+                            id: parseInt(s.id),
+                            total: parseFloat(s.total) || 0
+                        };
+                    }).filter(function(s) { return !isNaN(s.id); });
+                    if (processed.length) {
+                        await db.sales.clear();
+                        await db.sales.bulkAdd(processed);
+                    }
+                }
+
+                var expSheet = getSheetCaseInsensitive(workbook, 'expenses');
+                if (expSheet) {
+                    var expData = XLSX.utils.sheet_to_json(expSheet);
+                    var validExp = expData.filter(function(e) { return e.id !== undefined && e.id !== ''; });
+                    validExp = validExp.map(function(e) {
+                        return {
+                            ...e,
+                            id: parseInt(e.id),
+                            amount: parseFloat(e.amount) || 0
+                        };
+                    }).filter(function(e) { return !isNaN(e.id); });
+                    if (validExp.length) {
+                        await db.expenses.clear();
+                        await db.expenses.bulkAdd(validExp);
+                    }
+                }
+
+                var cusSheet = getSheetCaseInsensitive(workbook, 'customers');
+                if (cusSheet) {
+                    var cusData = XLSX.utils.sheet_to_json(cusSheet);
+                    var validCus = cusData.filter(function(c) { return c.idNumber !== undefined && c.idNumber !== ''; });
+                    validCus = validCus.map(function(c) {
+                        return {
+                            ...c,
+                            idNumber: String(c.idNumber)
+                        };
+                    });
+                    if (validCus.length) {
+                        await db.customers.clear();
+                        await db.customers.bulkAdd(validCus);
+                    }
+                }
+
+                // SECURITY: Restore premium state — no Excel file can change it
+                if (savedDeviceId) localStorage.setItem('stashRx_deviceID', savedDeviceId);
+                else localStorage.removeItem('stashRx_deviceID');
+                if (savedLicense) localStorage.setItem('stashRx_license', savedLicense);
+                else localStorage.removeItem('stashRx_license');
+
+                if (typeof loadInventory === 'function') await loadInventory();
+                if (typeof updateDashboardStats === 'function') await updateDashboardStats();
+                if (typeof renderInventoryStatus === 'function') await renderInventoryStatus();
+                if (typeof checkPremiumStatus === 'function') await checkPremiumStatus();
+
+                if (typeof iosAlert !== 'undefined') iosAlert('Import completed successfully! Refresh the page if some lists do not update.', 'Success');
+                else alert('Import completed successfully! Refresh the page to see changes.');
+            } catch(err) {
+                console.error('[stashRx] Import error:', err);
+                if (typeof iosAlert !== 'undefined') iosAlert('Import failed: ' + err.message, 'Error');
+                else alert('Import failed: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Also set window.handleImport so the HTML attribute resolves to our version
+    // (redundant with capture-phase, but covers edge cases)
+    window.handleImport = _secureHandleImport;
 })();
 </script>
 
