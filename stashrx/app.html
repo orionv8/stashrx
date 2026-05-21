@@ -191,6 +191,26 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then(reg => {
                     console.log('SW registered!', reg);
+
+                    // Check for updates immediately, then every 60 seconds
+                    reg.update();
+                    setInterval(() => reg.update(), 60000);
+
+                    // When a new SW is waiting, activate it and reload
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'activated') {
+                                    // New version is active — reload to get fresh assets
+                                    if (navigator.serviceWorker.controller) {
+                                        console.log('New version activated, reloading...');
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        }
+                    });
                 }).catch(err => console.log('SW registration failed', err));
             });
         }
