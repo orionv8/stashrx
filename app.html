@@ -20,27 +20,27 @@
         }
         ::-webkit-scrollbar { display: none; }
         body { -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
-
+        
         .glass-header {
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-bottom: 0.5px solid rgba(0,0,0,0.06);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 0.5px solid rgba(0,0,0,0.1);
         }
-
+        
         .ios-toggle:checked {
-            background-color: #10b981;
+            background-color: #10b981; /* Emerald 500 */
         }
         .ios-toggle:checked:after {
             transform: translateX(100%);
             border-color: white;
         }
-
+        
         /* Drawer Animations */
         #cartDrawer { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
         .drawer-open { transform: translateY(0%); }
         .drawer-closed { transform: translateY(100%); }
-
+        
         /* Safe area bottom padding for iPhone home indicator */
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
 
@@ -59,128 +59,6 @@
             -webkit-appearance: none;
             margin: 0;
         }
-
-        /* ═══════════════════════════════════════════════
-           iPad / Tablet Responsive Layout
-           Centers content in a phone-style column on
-           screens wider than 768px for optimal UX.
-           ═══════════════════════════════════════════════ */
-        @media (min-width: 768px) {
-            body {
-                background: linear-gradient(145deg, #E8E8ED 0%, #D1D1D6 100%);
-            }
-
-            /* Center fixed header on iPad */
-            header.glass-header {
-                max-width: 520px;
-                left: 0; right: 0;
-                margin: 0 auto;
-                border-radius: 0 0 16px 16px;
-                border: 0.5px solid rgba(0,0,0,0.06);
-                border-top: none;
-                box-shadow: 0 2px 20px rgba(0,0,0,0.06);
-            }
-
-            /* Center each screen's content */
-            #screenLedger, #screenExpenses, #screenDashboard, #screenInventory {
-                max-width: 520px;
-                margin-left: auto;
-                margin-right: auto;
-                background: #F2F2F7;
-                box-shadow: 0 0 40px rgba(0,0,0,0.08);
-            }
-
-            /* Center fixed bottom elements */
-            #miniCart {
-                max-width: 488px;
-                left: 0 !important; right: 0 !important;
-                margin: 0 auto;
-            }
-            #cartDrawer {
-                max-width: 520px;
-                left: 0; right: 0;
-                margin: 0 auto;
-                border-radius: 20px 20px 0 0;
-            }
-
-            /* Wider sidebar on iPad */
-            #sideMenuPanel {
-                width: 300px !important;
-                border-radius: 0 20px 20px 0;
-            }
-
-            /* Modals slightly larger on iPad */
-            #iosModalCard {
-                max-width: 320px;
-            }
-            #addModalCard, #editModalCard {
-                max-width: 420px;
-            }
-
-            /* FAB buttons stay centered within the column */
-            #screenDashboard button[onclick="openAnalyticsModal()"],
-            #screenInventory button[onclick="openAddModal()"] {
-                left: 50% !important;
-            }
-        }
-
-        /* ═══════════════════════════════════════════════
-           Sidebar safe area & touch target fixes
-           ═══════════════════════════════════════════════ */
-        #sideMenuPanel {
-            padding-top: env(safe-area-inset-top, 0px);
-        }
-        #settingsNavPanel .settings-close-area {
-            padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 8px);
-        }
-
-        /* Ensure all buttons meet 44px minimum touch target */
-        #settingsNavPanel button,
-        #mainNavPanel nav a {
-            min-height: 44px;
-            display: flex;
-            align-items: center;
-        }
-
-        /* ═══════════════════════════════════════════════
-           General design polish
-           ═══════════════════════════════════════════════ */
-
-        /* Smoother sidebar slide */
-        #sideMenuPanel {
-            transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
-            box-shadow: 4px 0 24px rgba(0,0,0,0.08);
-        }
-
-        /* Better overlay backdrop */
-        #sideMenu .absolute.inset-0.bg-black\/40 {
-            transition: opacity 0.3s ease;
-        }
-
-        /* Refined card styling for modals */
-        #addModalCard, #editModalCard {
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-        }
-
-        /* Improved mini cart button */
-        #miniCart {
-            box-shadow: 0 8px 30px rgba(16,185,129,0.3), 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        /* Better cart drawer shadow */
-        #cartDrawer {
-            box-shadow: 0 -8px 40px rgba(0,0,0,0.12);
-        }
-
-        /* Smooth button press feedback */
-        .active\:scale-95:active {
-            transition: transform 0.1s ease;
-        }
-
-        /* Better focus rings across all inputs */
-        input:focus, select:focus, textarea:focus {
-            transition: box-shadow 0.15s ease, border-color 0.15s ease;
-        }
     </style>
 
     <link rel="manifest" href="manifest.json?v=4">
@@ -192,15 +70,6 @@
                 navigator.serviceWorker.register('sw.js').then(reg => {
                     console.log('SW registered!', reg);
                 }).catch(err => console.log('SW registration failed', err));
-
-                // Reload once when a new SW takes control (not on first install)
-                let refreshing = false;
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (!refreshing) {
-                        refreshing = true;
-                        window.location.reload();
-                    }
-                });
             });
         }
     </script>
@@ -211,11 +80,11 @@
     <!-- Glass Header -->
     <header class="glass-header z-20 flex-shrink-0 pt-2 pb-3 px-4 fixed top-0 w-full">
         <div class="flex justify-between items-center mb-3 relative">
-            <button onclick="toggleMenu()" class="text-emerald-500 text-2xl p-2 -ml-1 active:opacity-50 transition relative z-10 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl active:bg-emerald-50">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <button onclick="toggleMenu()" class="text-emerald-400 text-2xl px-1 active:opacity-50 transition relative z-10">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <h1 id="headerTitle" class="text-[17px] font-semibold tracking-tight absolute inset-0 flex items-center justify-center pointer-events-none">Sales Ledger</h1>
-            <div class="text-emerald-600 font-medium text-[11px] px-1.5 py-0.5 relative z-10 text-right leading-tight bg-emerald-50 rounded-lg" id="headerDate">
+            <div class="text-emerald-600 font-medium text-[12px] px-1 relative z-10 text-right leading-tight" id="headerDate">
                 Today
             </div>
         </div>
@@ -226,13 +95,13 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
-                <input type="text" id="searchInput" oninput="filterInventory()" class="block w-full h-full pl-9 pr-8 rounded-xl bg-[#E8E8ED] text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition placeholder:text-gray-400" placeholder="Search medicines...">
+                <input type="text" id="searchInput" oninput="filterInventory()" class="block w-full h-full pl-9 pr-8 rounded-xl bg-[#E3E3E8] text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" placeholder="Search medicines...">
                 <div id="clearSearchBtn" onclick="clearSearch()" class="absolute inset-y-0 right-0 pr-2 flex items-center hidden cursor-pointer">
                     <div class="bg-gray-300 text-gray-400 rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">✕</div>
                 </div>
             </div>
             <div class="relative h-full">
-                <button class="bg-[#E8E8ED] text-emerald-600 h-full px-3.5 rounded-xl flex items-center justify-center active:bg-emerald-100 transition">
+                <button class="bg-[#E3E3E8] text-emerald-600 h-full px-3 rounded-xl flex items-center justify-center active:bg-emerald-100 transition">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                 </button>
                 <select id="invSort" onchange="handleSortChange()" class="absolute inset-0 w-full h-full opacity-0">
@@ -250,13 +119,13 @@
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="toggleMenu(); resetSettingsMenu()"></div>
         <div class="absolute top-0 left-0 bottom-0 w-[200px] bg-white shadow-xl flex flex-col transform -translate-x-full transition-transform duration-300" id="sideMenuPanel">
             <!-- Logo & Title Area -->
-            <div class="px-5 pt-8 pb-5 border-b border-gray-100/80 flex-shrink-0 flex flex-col items-center bg-gradient-to-b from-emerald-50/40 to-transparent">
-                <div class="w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-2.5 shadow-sm border border-emerald-100/80">
+            <div class="px-5 pt-8 pb-5 border-b border-gray-100 flex-shrink-0 flex flex-col items-center">
+                <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-2 shadow-sm border border-emerald-100">
                     <span class="text-3xl">⚕️</span>
                 </div>
-                <h1 class="text-[26px] font-extrabold tracking-tighter text-gray-900 leading-none mb-0.5">stash<span class="text-emerald-500">Rx</span></h1>
-                <p class="text-[10px] text-gray-400 mt-1 text-center uppercase tracking-[0.18em] font-semibold">Pharmacy Journal</p>
-                <button onclick="showPremiumModal()" id="manualProBadge" class="mt-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] uppercase tracking-wider font-bold px-4 py-1.5 rounded-full shadow-sm shadow-emerald-500/20 active:scale-95 transition">Unlock Premium</button>
+                <h1 class="text-3xl font-extrabold tracking-tighter text-gray-900 leading-none mb-1">stash<span class="text-emerald-500">Rx</span></h1>
+                <p class="text-[11px] text-gray-400 mt-1 text-center uppercase tracking-[0.15em] font-bold">Pharmacy Operations Journal</p>
+                <button onclick="showPremiumModal()" id="manualProBadge" class="mt-3 bg-emerald-100 text-emerald-700 text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition">Unlock Premium</button>
             </div>
             
             <!-- Sliding Container -->
@@ -264,33 +133,26 @@
                 
                 <!-- Main Nav Panel -->
                 <div id="mainNavPanel" class="absolute inset-0 flex flex-col transition-transform duration-300 transform translate-y-0 bg-white">
-                    <nav class="space-y-1.5 flex-grow overflow-y-auto p-4" id="mainNav">
-                        <a href="#" id="navDashboard" onclick="showDashboard()" class="block px-4 py-3 rounded-xl text-gray-600 font-medium active:bg-gray-50 transition text-[15px]">Dashboard</a>
-                        <a href="#" id="navInventory" onclick="showInventory()" class="block px-4 py-3 rounded-xl text-gray-600 font-medium active:bg-gray-50 transition text-[15px]">Inventory</a>
-                        <a href="#" id="navLedger" onclick="showLedger()" class="block px-4 py-3 bg-emerald-50 rounded-xl text-emerald-700 font-semibold transition text-[15px]">Sales Ledger</a>
-                        <a href="#" id="navExpenses" onclick="showExpenses()" class="block px-4 py-3 rounded-xl text-gray-600 font-medium active:bg-gray-50 transition text-[15px]">Expenses</a>
-                        <div class="my-2 border-t border-gray-100"></div>
-                        <a href="#" id="navSettings" onclick="toggleSettingsMenu()" class="block px-4 py-3 rounded-xl text-gray-600 font-medium active:bg-gray-50 transition text-[15px] flex items-center gap-2">
+                    <nav class="space-y-2 flex-grow overflow-y-auto p-4" id="mainNav">
+                        <a href="#" id="navDashboard" onclick="showDashboard()" class="block px-4 py-3 rounded-xl text-gray-700 font-medium active:bg-gray-50">Dashboard</a>
+                        <a href="#" id="navInventory" onclick="showInventory()" class="block px-4 py-3 rounded-xl text-gray-700 font-medium active:bg-gray-50">Inventory</a>
+                        <a href="#" id="navLedger" onclick="showLedger()" class="block px-4 py-3 bg-emerald-50 rounded-xl text-emerald-700 font-semibold">Sales Ledger</a>
+                        <a href="#" id="navExpenses" onclick="showExpenses()" class="block px-4 py-3 rounded-xl text-gray-700 font-medium active:bg-gray-50">Expenses</a>
+                        <a href="#" id="navSettings" onclick="toggleSettingsMenu()" class="block px-4 py-3 rounded-xl text-gray-700 font-medium active:bg-gray-50 flex items-center gap-2">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                             Settings
                         </a>
                     </nav>
                     
-                    <div class="p-4 border-t border-gray-100 space-y-3 flex-shrink-0" style="padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 16px);">
+                    <div class="p-4 border-t border-gray-100 space-y-2 pb-6">
                         <input type="file" id="importFile" accept=".xlsx, .xls, .csv" class="hidden">
-
-                        <!-- Close sidebar button -->
-                        <button onclick="toggleMenu(); resetSettingsMenu();" class="w-full py-3 bg-gray-100 text-gray-600 font-semibold rounded-xl active:bg-gray-200 transition text-[14px] min-h-[44px] flex items-center justify-center gap-2">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            Close Menu
-                        </button>
-
+                        
                         <!-- Bottom Links -->
-                        <div class="w-full flex flex-col items-center space-y-1.5 pt-1">
+                        <div class="mt-6 w-full flex flex-col items-center space-y-2">
                             <div class="flex justify-center items-center space-x-2 text-[10px] text-gray-400 font-medium">
-                                <button onclick="showLegal('terms')" class="hover:text-gray-600 transition cursor-pointer min-h-[32px] flex items-center">Terms of Use</button>
+                                <button onclick="showLegal('terms')" class="hover:text-gray-600 transition cursor-pointer">Terms of Use</button>
                                 <span>•</span>
-                                <button onclick="showLegal('privacy')" class="hover:text-gray-600 transition cursor-pointer min-h-[32px] flex items-center">Privacy Policy</button>
+                                <button onclick="showLegal('privacy')" class="hover:text-gray-600 transition cursor-pointer">Privacy Policy</button>
                             </div>
                             <a href="mailto:orionv888@gmail.com" class="text-[10px] text-gray-400 font-medium hover:text-gray-600 transition cursor-pointer">Contact Us</a>
                         </div>
@@ -358,8 +220,8 @@
                     </div>
 
                     <!-- Close Button -->
-                    <div class="settings-close-area p-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
-                        <button onclick="toggleSettingsMenu()" class="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-xl active:bg-gray-300 transition text-sm min-h-[44px]">Close</button>
+                    <div class="p-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
+                        <button onclick="toggleSettingsMenu()" class="w-full py-2.5 bg-gray-200 text-gray-700 font-bold rounded-xl active:bg-gray-300 transition text-sm">Close</button>
                     </div>
                 </div>
 
@@ -395,12 +257,12 @@
         </main>
 
     <!-- Floating Mini Cart Button -->
-    <div id="miniCart" class="fixed bottom-6 left-4 right-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-2xl p-3.5 flex justify-between items-center z-30 transition-transform transform translate-y-24" onclick="openDrawer()">
+    <div id="miniCart" class="fixed bottom-6 left-4 right-4 bg-emerald-600 text-white rounded-2xl shadow-lg p-3 flex justify-between items-center z-30 transition-transform transform translate-y-24" onclick="openDrawer()">
             <div class="flex items-center space-x-3">
-                <div class="bg-white/20 rounded-full h-8 w-8 flex items-center justify-center font-bold text-sm backdrop-blur-sm" id="miniCount">0</div>
+                <div class="bg-emerald-500 rounded-full h-8 w-8 flex items-center justify-center font-semibold text-sm" id="miniCount">0</div>
                 <span class="font-medium text-[15px]">View Current Sale</span>
             </div>
-            <span class="font-bold text-[17px] tracking-tight" id="miniTotal">₱0.00</span>
+            <span class="font-bold text-[17px]" id="miniTotal">₱0.00</span>
         </div>
     </div>
 
@@ -427,7 +289,7 @@
                             <input type="number" id="expAmount" inputmode="decimal" placeholder="Amount" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold text-center">
                         </div>
                     </div>
-                    <button onclick="saveExpense()" class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold py-3 rounded-xl shadow-sm shadow-emerald-500/20 active:scale-95 transition mt-1">
+                    <button onclick="saveExpense()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-sm active:scale-95 transition mt-1">
                         Save Expense
                     </button>
                 </div>
@@ -465,7 +327,7 @@
         </main>
         
         <!-- Analytics FAB -->
-        <button onclick="openAnalyticsModal()" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-600/30 active:scale-95 transition z-40">
+        <button onclick="openAnalyticsModal()" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-14 h-14 bg-[#10b981] text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 active:bg-emerald-600 transition z-40">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
         </button>
     </div>
@@ -483,7 +345,7 @@
         </main>
         
         <!-- Add Item FAB -->
-        <button onclick="openAddModal()" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-600/30 active:scale-95 transition z-40">
+        <button onclick="openAddModal()" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-14 h-14 bg-[#10b981] text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 active:bg-emerald-600 transition z-40">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
     </div>
@@ -506,15 +368,11 @@
 
     <!-- Full Cart Drawer (Bottom Sheet) -->
     <div id="cartOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden" onclick="closeDrawer()"></div>
-    <div id="cartDrawer" class="fixed bottom-0 left-0 right-0 bg-[#F2F2F7] rounded-t-2xl z-50 drawer-closed flex flex-col max-h-[85vh]">
-        <!-- Drawer Handle -->
-        <div class="flex justify-center pt-2.5 pb-1 bg-white rounded-t-2xl">
-            <div class="w-10 h-1 bg-gray-300 rounded-full"></div>
-        </div>
+    <div id="cartDrawer" class="fixed bottom-0 left-0 right-0 bg-[#F2F2F7] rounded-t-2xl shadow-2xl z-50 drawer-closed flex flex-col max-h-[85vh]">
         <!-- Drawer Header -->
-        <div class="bg-white flex justify-between items-center px-4 pb-3 border-b border-gray-100 flex-shrink-0">
+        <div class="bg-white rounded-t-2xl flex justify-between items-center p-4 border-b border-gray-100 flex-shrink-0">
             <button onclick="closeDrawer()" class="text-emerald-600 font-medium text-[17px] px-3 py-2 active:opacity-50 min-h-[44px] flex items-center">Close</button>
-            <h2 class="font-semibold text-[17px] tracking-tight">Current Sale</h2>
+            <h2 class="font-semibold text-[17px]">Current Sale</h2>
             <button onclick="clearCart()" class="text-red-500 font-medium text-[17px] px-3 py-2 active:opacity-50 min-h-[44px] flex items-center">Clear</button>
         </div>
         
@@ -824,8 +682,6 @@ window.onload = async function(e) {
 let cashflowChart = null;
 let topItemsChart = null;
 
-let expenseBreakdownChart = null;
-
 async function updateCharts() {
     const startInput = document.getElementById('reportStartDate').value;
     const endInput = document.getElementById('reportEndDate').value;
@@ -836,58 +692,11 @@ async function updateCharts() {
     const startDate = new Date(startStr);
     const endDate = new Date(endStr);
 
-    const allSales = await db.sales.toArray();
-    const allExpenses = await db.expenses.toArray();
+    const sales = await db.sales.toArray();
+    const expenses = await db.expenses.toArray();
 
-    // Filter to date range
-    const sales = allSales.filter(s => { const d = new Date(s.date); return d >= startDate && d <= endDate; });
-    const expenses = allExpenses.filter(e => { const d = new Date(e.date); return d >= startDate && d <= endDate; });
-
-    // ─── Enhanced Stats ───
-    const totalSales = sales.reduce((s, sale) => s + (sale.total || 0), 0);
-    const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-    const netProfit = totalSales - totalExpenses;
-    const txnCount = sales.length + expenses.length;
-    const avgSale = sales.length > 0 ? totalSales / sales.length : 0;
-    const margin = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0;
-    const itemsSold = sales.reduce((sum, s) => sum + (s.items ? s.items.reduce((q, i) => q + (i.qty || 1), 0) : 0), 0);
-
-    const fmt = (v) => '₱' + Math.abs(v).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-    document.getElementById('statTodaySales').textContent = fmt(totalSales);
-    document.getElementById('statTodayExp').textContent = fmt(totalExpenses);
-
-    const netEl = document.getElementById('statNetProfit');
-    if (netEl) {
-        netEl.textContent = (netProfit < 0 ? '-' : '') + fmt(netProfit);
-        const netCard = netEl.closest('div[class*="border"]');
-        if (netCard) {
-            if (netProfit >= 0) {
-                netCard.className = 'bg-blue-50 border border-blue-100 rounded-xl p-3.5 shadow-sm';
-                netEl.className = 'text-[18px] font-bold text-blue-600 tracking-tight';
-            } else {
-                netCard.className = 'bg-orange-50 border border-orange-100 rounded-xl p-3.5 shadow-sm';
-                netEl.className = 'text-[18px] font-bold text-orange-600 tracking-tight';
-            }
-        }
-    }
-
-    const txnEl = document.getElementById('statTxnCount');
-    if (txnEl) txnEl.textContent = txnCount.toLocaleString();
-
-    const avgEl = document.getElementById('statAvgSale');
-    if (avgEl) avgEl.textContent = fmt(avgSale);
-
-    const marginEl = document.getElementById('statMargin');
-    if (marginEl) {
-        marginEl.textContent = margin.toFixed(1) + '%';
-        marginEl.className = 'text-[16px] font-bold tracking-tight ' + (margin >= 0 ? 'text-emerald-600' : 'text-red-500');
-    }
-
-    const itemsEl = document.getElementById('statItemsSold');
-    if (itemsEl) itemsEl.textContent = itemsSold.toLocaleString();
-
-    // ─── 1. Revenue vs Expenses (Daily grouping) ───
+    // 1. Prepare Revenue vs Expenses (Daily grouping)
+    // Create a dictionary of dates
     let datesDict = {};
     let tempDate = new Date(startDate);
     while (tempDate <= endDate) {
@@ -897,17 +706,24 @@ async function updateCharts() {
     }
 
     sales.forEach(sale => {
-        let dStr = new Date(sale.date).toISOString().split('T')[0];
-        if (datesDict[dStr]) datesDict[dStr].sales += sale.total;
+        let d = new Date(sale.date);
+        if (d >= startDate && d <= endDate) {
+            let dStr = d.toISOString().split('T')[0];
+            if (datesDict[dStr]) datesDict[dStr].sales += sale.total;
+        }
     });
 
     expenses.forEach(exp => {
-        let dStr = new Date(exp.date).toISOString().split('T')[0];
-        if (datesDict[dStr]) datesDict[dStr].expenses += exp.amount;
+        let d = new Date(exp.date);
+        if (d >= startDate && d <= endDate) {
+            let dStr = d.toISOString().split('T')[0];
+            if (datesDict[dStr]) datesDict[dStr].expenses += exp.amount;
+        }
     });
 
     const labels = Object.keys(datesDict).map(d => {
-        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        let dateObj = new Date(d);
+        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     });
     const salesData = Object.values(datesDict).map(v => v.sales);
     const expData = Object.values(datesDict).map(v => v.expenses);
@@ -931,7 +747,7 @@ async function updateCharts() {
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: {
-                    x: { grid: { display: false }, ticks: { maxRotation: 45, font: {size: 9} } },
+                    x: { grid: { display: false } },
                     y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f4f6' } }
                 },
                 plugins: { legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, font: {size: 10} } } }
@@ -939,58 +755,21 @@ async function updateCharts() {
         });
     }
 
-    // ─── 2. Expense Breakdown by Category (Doughnut) ───
-    const expByCategory = {};
-    expenses.forEach(e => {
-        const cat = e.category || 'Other';
-        expByCategory[cat] = (expByCategory[cat] || 0) + (e.amount || 0);
-    });
-
-    const catLabels = Object.keys(expByCategory);
-    const catData = Object.values(expByCategory);
-    const catColors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#f43f5e', '#84cc16', '#6366f1'];
-
-    if (expenseBreakdownChart) {
-        expenseBreakdownChart.data.labels = catLabels;
-        expenseBreakdownChart.data.datasets[0].data = catData;
-        expenseBreakdownChart.data.datasets[0].backgroundColor = catColors.slice(0, catLabels.length);
-        expenseBreakdownChart.update();
-    } else {
-        const ctx3 = document.getElementById('chartExpenseBreakdown');
-        if (ctx3) {
-            expenseBreakdownChart = new Chart(ctx3.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: catLabels,
-                    datasets: [{
-                        data: catData,
-                        backgroundColor: catColors.slice(0, catLabels.length),
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: {
-                        legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: {size: 10}, padding: 8 } }
-                    }
-                }
-            });
-        }
-    }
-
-    // ─── 3. Top 10 Fast Moving Items ───
+    // 2. Prepare Top 10 Fast Moving Items
     let itemSales = {};
     sales.forEach(sale => {
-        if (sale.items) {
-            sale.items.forEach(item => {
-                if (!itemSales[item.id]) itemSales[item.id] = { qty: 0 };
-                itemSales[item.id].qty += item.qty;
-            });
+        let d = new Date(sale.date);
+        if (d >= startDate && d <= endDate) {
+            if (sale.items) {
+                sale.items.forEach(item => {
+                    if (!itemSales[item.id]) itemSales[item.id] = { qty: 0, name: '' };
+                    itemSales[item.id].qty += item.qty;
+                });
+            }
         }
     });
 
+    // We need item names. Let's get them from inventory
     const inventory = await db.inventory.toArray();
     let inventoryMap = {};
     inventory.forEach(i => {
@@ -1060,166 +839,8 @@ function closeAnalyticsModal() {
     }, 200);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Dashboard Override: Date-grouped transaction log + enhanced stats
-// ═══════════════════════════════════════════════════════════════
-window.updateDashboardStats = async function() {
-    const startInput = document.getElementById('reportStartDate').value;
-    const endInput = document.getElementById('reportEndDate').value;
-    if (!startInput || !endInput) return;
-
-    const startDate = new Date(startInput + 'T00:00:00');
-    const endDate = new Date(endInput + 'T23:59:59');
-
-    const allSales = await db.sales.toArray();
-    const allExpenses = await db.expenses.toArray();
-
-    // Filter by date range
-    const sales = allSales.filter(s => {
-        const d = new Date(s.date);
-        return d >= startDate && d <= endDate;
-    });
-    const expenses = allExpenses.filter(e => {
-        const d = new Date(e.date);
-        return d >= startDate && d <= endDate;
-    });
-
-    // Calculate totals for stat cards
-    const totalSales = sales.reduce((sum, s) => sum + (s.total || 0), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-
-    document.getElementById('statTodaySales').textContent = '₱' + totalSales.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('statTodayExp').textContent = '₱' + totalExpenses.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-    // Build combined transaction list
-    const transactions = [];
-    sales.forEach(s => {
-        const itemCount = s.items ? s.items.reduce((sum, i) => sum + (i.qty || 1), 0) : 0;
-        const itemNames = s.items ? s.items.map(i => i.brand || i.generic || i.name || 'Item').slice(0, 3) : [];
-        const hasDiscount = s.discountDetails && s.discountDetails.idNumber;
-        transactions.push({
-            type: 'sale',
-            date: new Date(s.date),
-            amount: s.total || 0,
-            itemCount: itemCount,
-            itemNames: itemNames,
-            totalItems: s.items ? s.items.length : 0,
-            hasDiscount: hasDiscount,
-            id: s.id
-        });
-    });
-    expenses.forEach(e => {
-        transactions.push({
-            type: 'expense',
-            date: new Date(e.date),
-            amount: e.amount || 0,
-            category: e.category || 'Other',
-            description: e.description || '',
-            id: e.id
-        });
-    });
-
-    // Sort by date descending (newest first)
-    transactions.sort((a, b) => b.date - a.date);
-
-    // Group by date string
-    const grouped = {};
-    transactions.forEach(t => {
-        const dateKey = t.date.toISOString().split('T')[0];
-        if (!grouped[dateKey]) grouped[dateKey] = [];
-        grouped[dateKey].push(t);
-    });
-
-    // Render with date dividers
-    const listEl = document.getElementById('dashboardReportList');
-    let html = '';
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(dateKey => {
-        // Date header
-        let dateLabel;
-        if (dateKey === today) {
-            dateLabel = 'Today';
-        } else if (dateKey === yesterday) {
-            dateLabel = 'Yesterday';
-        } else {
-            const d = new Date(dateKey + 'T12:00:00');
-            dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        }
-
-        // Daily subtotals
-        const daySales = grouped[dateKey].filter(t => t.type === 'sale').reduce((s, t) => s + t.amount, 0);
-        const dayExpenses = grouped[dateKey].filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-        const dayNet = daySales - dayExpenses;
-
-        html += '<div class="mt-4 mb-2 first:mt-0">';
-        html += '  <div class="flex items-center justify-between px-1 mb-1">';
-        html += '    <div class="flex items-center gap-2">';
-        html += '      <span class="text-[13px] font-bold text-gray-800">' + dateLabel + '</span>';
-        html += '      <span class="text-[10px] text-gray-400 font-medium">' + grouped[dateKey].length + ' transaction' + (grouped[dateKey].length !== 1 ? 's' : '') + '</span>';
-        html += '    </div>';
-        html += '    <span class="text-[11px] font-semibold ' + (dayNet >= 0 ? 'text-emerald-600' : 'text-red-500') + '">net ₱' + Math.abs(dayNet).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
-        html += '  </div>';
-        html += '  <div class="h-[1px] bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-full"></div>';
-        html += '</div>';
-
-        // Render each transaction in this group
-        grouped[dateKey].forEach(t => {
-            const timeStr = t.date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-
-            if (t.type === 'sale') {
-                const itemSummary = t.itemNames.join(', ') + (t.totalItems > 3 ? ' +' + (t.totalItems - 3) + ' more' : '');
-                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2">';
-                html += '  <div class="flex justify-between items-start">';
-                html += '    <div class="flex-grow min-w-0">';
-                html += '      <div class="flex items-center gap-2">';
-                html += '        <div class="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">';
-                html += '          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                html += '        </div>';
-                html += '        <div class="min-w-0">';
-                html += '          <span class="text-[14px] font-semibold text-gray-900">Sale</span>';
-                html += '          <span class="text-[11px] text-gray-400 ml-1.5">' + timeStr + '</span>';
-                if (t.hasDiscount) html += '          <span class="text-[9px] bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded-full ml-1">SC/PWD</span>';
-                html += '        </div>';
-                html += '      </div>';
-                if (t.itemCount > 0) {
-                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-9 truncate">' + t.itemCount + ' item' + (t.itemCount !== 1 ? 's' : '') + (itemSummary ? ' — ' + itemSummary : '') + '</p>';
-                }
-                html += '    </div>';
-                html += '    <span class="text-[15px] font-bold text-emerald-600 flex-shrink-0 ml-2">₱' + t.amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
-                html += '  </div>';
-                html += '</div>';
-            } else {
-                const catIcons = { 'Restock': '📦', 'Utilities': '💡', 'Salary': '👤', 'Supplies': '🧹', 'Other': '📋' };
-                const icon = catIcons[t.category] || '📋';
-                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2">';
-                html += '  <div class="flex justify-between items-start">';
-                html += '    <div class="flex-grow min-w-0">';
-                html += '      <div class="flex items-center gap-2">';
-                html += '        <div class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0 text-[13px]">' + icon + '</div>';
-                html += '        <div class="min-w-0">';
-                html += '          <span class="text-[14px] font-semibold text-gray-900">' + t.category + '</span>';
-                html += '          <span class="text-[11px] text-gray-400 ml-1.5">' + timeStr + '</span>';
-                html += '        </div>';
-                html += '      </div>';
-                if (t.description) {
-                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-9 truncate">' + t.description + '</p>';
-                }
-                html += '    </div>';
-                html += '    <span class="text-[15px] font-bold text-red-500 flex-shrink-0 ml-2">-₱' + t.amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
-                html += '  </div>';
-                html += '</div>';
-            }
-        });
-    });
-
-    if (transactions.length === 0) {
-        html = '<div class="text-center py-12 text-gray-400"><p class="text-[14px] font-medium">No transactions</p><p class="text-[12px] mt-1">Adjust the date range above</p></div>';
-    }
-
-    listEl.innerHTML = html;
-};
+// Remove the hook that runs updateCharts automatically on updateDashboardStats
+window.updateDashboardStats = originalUpdateDashboardStats;
 
 </script>
 
@@ -1233,57 +854,23 @@ window.updateDashboardStats = async function() {
                 <div class="w-[45px]"></div>
             </div>
             <div class="p-4 overflow-y-auto space-y-4 pb-12">
-                <!-- Summary Cards: 2x2 Grid -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 shadow-sm">
-                        <div class="text-[18px] font-bold text-emerald-600 tracking-tight" id="statTodaySales">₱0.00</div>
-                        <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-500 mt-0.5">Total Sales</div>
-                    </div>
-                    <div class="bg-red-50 border border-red-100 rounded-xl p-3.5 shadow-sm">
-                        <div class="text-[18px] font-bold text-red-600 tracking-tight" id="statTodayExp">₱0.00</div>
-                        <div class="text-[10px] uppercase tracking-wider font-bold text-red-500 mt-0.5">Expenses</div>
-                    </div>
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3.5 shadow-sm">
-                        <div class="text-[18px] font-bold text-blue-600 tracking-tight" id="statNetProfit">₱0.00</div>
-                        <div class="text-[10px] uppercase tracking-wider font-bold text-blue-500 mt-0.5">Net Profit</div>
-                    </div>
-                    <div class="bg-purple-50 border border-purple-100 rounded-xl p-3.5 shadow-sm">
-                        <div class="text-[18px] font-bold text-purple-600 tracking-tight" id="statTxnCount">0</div>
-                        <div class="text-[10px] uppercase tracking-wider font-bold text-purple-500 mt-0.5">Transactions</div>
-                    </div>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
+                    <div class="text-[20px] font-bold text-emerald-600" id="statTodaySales">₱0.00</div>
+                    <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-500 mt-1">Sales</div>
                 </div>
-
-                <!-- Avg Sale & Margin Strip -->
-                <div class="flex gap-3">
-                    <div class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
-                        <div class="text-[16px] font-bold text-gray-800" id="statAvgSale">₱0.00</div>
-                        <div class="text-[9px] uppercase tracking-wider font-semibold text-gray-400 mt-0.5">Avg Sale</div>
-                    </div>
-                    <div class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
-                        <div class="text-[16px] font-bold text-gray-800" id="statMargin">0%</div>
-                        <div class="text-[9px] uppercase tracking-wider font-semibold text-gray-400 mt-0.5">Profit Margin</div>
-                    </div>
-                    <div class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
-                        <div class="text-[16px] font-bold text-gray-800" id="statItemsSold">0</div>
-                        <div class="text-[9px] uppercase tracking-wider font-semibold text-gray-400 mt-0.5">Items Sold</div>
-                    </div>
+                <div class="bg-red-50 border border-red-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
+                    <div class="text-[20px] font-bold text-red-600" id="statTodayExp">₱0.00</div>
+                    <div class="text-[10px] uppercase tracking-wider font-bold text-red-500 mt-1">Expenses</div>
                 </div>
-
+            </div>
+                
                 <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
                     <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Revenue vs Expenses</h3>
                     <div class="relative h-[250px] w-full">
                         <canvas id="chartCashflow"></canvas>
                     </div>
                 </div>
-
-                <!-- Expense Breakdown -->
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Expense Breakdown</h3>
-                    <div class="relative h-[220px] w-full">
-                        <canvas id="chartExpenseBreakdown"></canvas>
-                    </div>
-                </div>
-
                 <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
                     <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Top 10 Fast Moving</h3>
                     <div class="relative h-[300px] w-full">
@@ -1743,11 +1330,11 @@ document.addEventListener('DOMContentLoaded', function() {
 //
 // Uses the existing global isPremium — do NOT redeclare it.
 
-var LICENSE_ENDPOINT = "https://generate-license-cpmhktrscq-as.a.run.app";
+var LICENSE_ENDPOINT = "https://generate-license-330835001360.asia-southeast1.run.app";
 
 // HMAC signing key — must match HMAC_SECRET on the server.
 // Replace this value after deploying the new server.
-var APP_HMAC_KEY = "PLACEHOLDER_REPLACE_WITH_HMAC_SECRET";
+var APP_HMAC_KEY = "a6754d4e533f9d809301d22ac86dfc4dde2d5081a232c7bccd10aea100ca4bef";
 
 // --- HMAC-SHA256 helper (Web Crypto API) ---
 async function computeHMAC(message, key) {
