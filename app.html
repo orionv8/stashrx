@@ -188,47 +188,19 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                // One-time purge: if we detect an old cache version, nuke everything and reload
-                const cacheNames = await caches.keys();
-                const currentVersion = 'stashRx-v50';
-                const hasCurrentCache = cacheNames.includes(currentVersion);
-                const hasOldCaches = cacheNames.some(n => n.startsWith('stashRx-') && n !== currentVersion);
-
-                if (hasOldCaches && !hasCurrentCache) {
-                    console.log('Old cache detected, purging...');
-                    // Delete all old caches
-                    await Promise.all(cacheNames.map(n => caches.delete(n)));
-                    // Unregister old service worker
-                    const regs = await navigator.serviceWorker.getRegistrations();
-                    await Promise.all(regs.map(r => r.unregister()));
-                    // Reload fresh from network
-                    window.location.reload();
-                    return;
-                }
-
+            window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then(reg => {
                     console.log('SW registered!', reg);
-
-                    // Check for updates immediately, then every 60 seconds
-                    reg.update();
-                    setInterval(() => reg.update(), 60000);
-
-                    // When a new SW is waiting, activate it and reload
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        if (newWorker) {
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'activated') {
-                                    if (navigator.serviceWorker.controller) {
-                                        console.log('New version activated, reloading...');
-                                        window.location.reload();
-                                    }
-                                }
-                            });
-                        }
-                    });
                 }).catch(err => console.log('SW registration failed', err));
+
+                // Reload once when a new SW takes control (not on first install)
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
             });
         }
     </script>
