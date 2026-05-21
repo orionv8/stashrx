@@ -944,9 +944,6 @@ function getSheetCaseInsensitive(workbook, name) {
 }
 
 // Override Import Data to read all tables robustly
-// IMPORTANT: This override MUST use window.handleImport AND redefine
-// the onchange handler to guarantee it takes precedence over the
-// obfuscated handleImport function declaration.
 window.handleImport = async function(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -957,17 +954,21 @@ window.handleImport = async function(event) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array', cellDates: true});
             
-            // SECURITY: Save premium state BEFORE import to prevent overwrite
-            const savedLicense = localStorage.getItem('stashRx_license');
-            const savedDeviceId = localStorage.getItem('stashRx_deviceID');
-            
             // Legacy fallback: if there is only 1 sheet and it's not named one of the known tables,
             // assume it's the inventory.
             const isLegacy = workbook.SheetNames.length === 1 && 
                             !['inventory', 'sales', 'expenses', 'customers', 'system_config'].includes(workbook.SheetNames[0].toLowerCase());
             
-            // System_Config tab is intentionally SKIPPED entirely.
-            // Premium credentials must never be imported from external files.
+            const sysSheet = getSheetCaseInsensitive(workbook, 'System_Config');
+            if (sysSheet) {
+                const sysData = XLSX.utils.sheet_to_json(sysSheet);
+                const protectedKeys = ['stashRx_license', 'stashRx_deviceID'];
+                for (let item of sysData) {
+                    if (item.key && item.value && !protectedKeys.includes(String(item.key))) {
+                        localStorage.setItem(String(item.key), String(item.value));
+                    }
+                }
+            }
             
             const invSheet = isLegacy ? workbook.Sheets[workbook.SheetNames[0]] : getSheetCaseInsensitive(workbook, 'inventory');
             if (invSheet) {
@@ -1043,12 +1044,6 @@ window.handleImport = async function(event) {
                 }
             }
             
-            // SECURITY: Restore premium state — no Excel file can change it
-            if (savedDeviceId) localStorage.setItem('stashRx_deviceID', savedDeviceId);
-            else localStorage.removeItem('stashRx_deviceID');
-            if (savedLicense) localStorage.setItem('stashRx_license', savedLicense);
-            else localStorage.removeItem('stashRx_license');
-            
             if(typeof loadInventory === 'function') await loadInventory();
             if(typeof updateDashboardStats === 'function') await updateDashboardStats();
             if(typeof renderInventoryStatus === 'function') await renderInventoryStatus();
@@ -1063,25 +1058,8 @@ window.handleImport = async function(event) {
         }
     };
     reader.readAsArrayBuffer(file);
-    // Reset the file input so the same file can be re-imported
-    event.target.value = '';
     event.target.value = ''; // reset file input
 };
-
-// Force-bind our secure handleImport to the file input element
-// Guarantees our version runs even if the obfuscated code has its own handleImport
-(function() {
-    function rebindImport() {
-        var el = document.getElementById('importFile');
-        if (el) el.onchange = window.handleImport;
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', rebindImport);
-    } else {
-        rebindImport();
-    }
-    setTimeout(rebindImport, 2000); // fallback for late-loading
-})();
 </script>
 
 
