@@ -985,6 +985,13 @@ window.handleImport = async function(event) {
                     };
                 }).filter(i => !isNaN(i.id));
                 
+                // Enforce 100-item inventory limit for free users
+                if (!isPremium && validInv.length > 100) {
+                    validInv = validInv.slice(0, 100);
+                    if (typeof iosAlert !== 'undefined') {
+                        iosAlert('Free version is limited to 100 inventory items. Only the first 100 were imported. Upgrade to Premium for unlimited items.', 'Limit Reached');
+                    }
+                }
                 if (validInv.length) {
                     await db.inventory.clear();
                     await db.inventory.bulkAdd(validInv);
