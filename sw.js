@@ -1,1 +1,42 @@
-Y29uc3QgQ0FDSEVfTkFNRSA9ICdzdGFzaFJ4LXY0MCc7CmNvbnN0IEFTU0VUUyA9IFsKICAnL3N0YXNocngvJywKICAnL3N0YXNocngvaW5kZXguaHRtbCcsCiAgJy9zdGFzaHJ4L2FwcC5odG1sJywKICAnL3N0YXNocngvY2hhcnQudW1kLm1pbi5qcycsCiAgJy9zdGFzaHJ4L21hbmlmZXN0Lmpzb24nLAogICcvc3Rhc2hyeC9pY29uLTE5Mi5wbmcnLAogICcvc3Rhc2hyeC9pY29uLTUxMi5wbmcnLAogICcvc3Rhc2hyeC9mYXZpY29uLmljbycKXTsKCnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignaW5zdGFsbCcsIGV2ZW50ID0+IHsKICBzZWxmLnNraXBXYWl0aW5nKCk7CiAgZXZlbnQud2FpdFVudGlsKAogICAgY2FjaGVzLm9wZW4oQ0FDSEVfTkFNRSkudGhlbihjYWNoZSA9PiB7CiAgICAgIHJldHVybiBjYWNoZS5hZGRBbGwoQVNTRVRTKTsKICAgIH0pCiAgKTsKfSk7CgpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZXZlbnQgPT4gewogIGV2ZW50LndhaXRVbnRpbCgKICAgIGNhY2hlcy5rZXlzKCkudGhlbihjYWNoZU5hbWVzID0+IHsKICAgICAgcmV0dXJuIFByb21pc2UuYWxsKAogICAgICAgIGNhY2hlTmFtZXMubWFwKGNhY2hlTmFtZSA9PiB7CiAgICAgICAgICBpZiAoY2FjaGVOYW1lICE9PSBDQUNIRV9OQU1FKSB7CiAgICAgICAgICAgIHJldHVybiBjYWNoZXMuZGVsZXRlKGNhY2hlTmFtZSk7CiAgICAgICAgICB9CiAgICAgICAgfSkKICAgICAgKTsKICAgIH0pLnRoZW4oKCkgPT4gc2VsZi5jbGllbnRzLmNsYWltKCkpCiAgKTsKfSk7CgpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2ZldGNoJywgZXZlbnQgPT4gewogIGV2ZW50LnJlc3BvbmRXaXRoKAogICAgY2FjaGVzLm1hdGNoKGV2ZW50LnJlcXVlc3QsIHsgaWdub3JlU2VhcmNoOiB0cnVlIH0pLnRoZW4ocmVzcG9uc2UgPT4gewogICAgICByZXR1cm4gcmVzcG9uc2UgfHwgZmV0Y2goZXZlbnQucmVxdWVzdCk7CiAgICB9KQogICk7Cn0pOwo=
+const CACHE_NAME = 'stashRx-v40';
+const ASSETS = [
+  '/stashrx/',
+  '/stashrx/index.html',
+  '/stashrx/app.html',
+  '/stashrx/chart.umd.min.js',
+  '/stashrx/manifest.json',
+  '/stashrx/icon-192.png',
+  '/stashrx/icon-512.png',
+  '/stashrx/favicon.ico'
+];
+
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(ASSETS);
+    })
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request, { ignoreSearch: true }).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});
