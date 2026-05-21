@@ -43,7 +43,7 @@ TIMESTAMP_WINDOW   = 300  # 5-minute window for HMAC timestamp
 # rate limit state. For stricter enforcement, use Firestore or Redis.
 rate_limit_store = {}  # { deviceId: [timestamp1, timestamp2, ...] }
 
-def check_rate_limit(device_id):
+def check_rate_limit(device_id, ip_addr):
     """Returns True if under limit, False if exceeded."""
     now = time.time()
     window = 3600  # 1 hour
@@ -60,6 +60,25 @@ def check_rate_limit(device_id):
         return False
 
     rate_limit_store[device_id].append(now)
+
+    if USE_FIRESTORE:
+        try:
+            db = get_firestore()
+            doc_ref = db.collection("rate_limits").document(f"{device_id}_{ip_addr}")
+            doc = doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+                reqs = data.get("requests", [])
+                reqs = [t for t in reqs if now - t < window]
+                if len(reqs) >= RATE_LIMIT:
+                    return False
+                reqs.append(now)
+                doc_ref.set({"requests": reqs})
+            else:
+                doc_ref.set({"requests": [now]})
+        except Exception as e:
+            app.logger.error(f"Firestore rate limit error: {e}")
+
     return True
 
 
@@ -177,8 +196,15 @@ def require_admin(f):
 # ─── CORS headers ───────────────────────────────────────────────────
 @app.after_request
 def add_cors(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Admin-Key"
+    if request.path.startswith("/admin"):
+        return response
+        
+    allowlist = ["http://localhost:8080", "https://stashrx-63954.web.app", "https://stashrx-63954.firebaseapp.com"]
+    origin = request.headers.get("Origin")
+    if origin in allowlist:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
     return response
 
@@ -206,22 +232,12 @@ def generate_license():
         return jsonify({"error": "Invalid request body"}), 400
 
     device_id = data.get("deviceId", "").strip()
-    timestamp = data.get("timestamp")
-    signature = data.get("signature", "").strip()
-
-    # Validate required fields
     if not device_id:
         return jsonify({"error": "Missing deviceId"}), 400
-    if not timestamp or not signature:
-        return jsonify({"error": "Missing authentication fields (timestamp, signature)"}), 401
-
-    # Layer 1: HMAC validation
-    valid, msg = validate_hmac(device_id, timestamp, signature)
-    if not valid:
-        return jsonify({"error": f"Authentication failed: {msg}"}), 401
 
     # Layer 2: Rate limiting
-    if not check_rate_limit(device_id):
+    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if not check_rate_limit(device_id, client_ip):
         return jsonify({"error": "Rate limit exceeded. Try again later."}), 429
 
     # Layer 3: Device whitelist check
@@ -328,7 +344,8 @@ def approve_device():
             })
             return jsonify({"status": "approved", "deviceId": device_id, "store": "firestore"})
         except Exception as e:
-            return jsonify({"error": f"Firestore write failed: {e}"}), 500
+            app.logger.error(f"Firestore write failed: {e}")
+            return jsonify({"error": "Internal server error"}), 500
     else:
         # In env-var mode, just confirm what should be added
         return jsonify({
@@ -365,7 +382,8 @@ def revoke_device():
             })
             return jsonify({"status": "revoked", "deviceId": device_id})
         except Exception as e:
-            return jsonify({"error": f"Firestore update failed: {e}"}), 500
+            app.logger.error(f"Firestore update failed: {e}")
+            return jsonify({"error": "Internal server error"}), 500
     else:
         return jsonify({
             "status": "manual_action_required",
@@ -395,7 +413,8 @@ def list_devices():
             })
         return jsonify({"devices": devices, "store": "firestore"})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        app.logger.error(f"Firestore list failed: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @app.route("/health", methods=["GET"])

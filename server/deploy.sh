@@ -61,8 +61,6 @@ if [[ "$SERVER_SALT" == CHANGE_ME_* && "$HMAC_SECRET" == CHANGE_ME_* ]]; then
     echo "  HMAC_SECRET:  $HMAC_SECRET"
     echo "  ADMIN_KEY:    $ADMIN_KEY"
     echo ""
-    echo "  HMAC_SECRET goes in app.html (obfuscated)"
-    echo "  ADMIN_KEY is for your admin curl commands"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
 fi
@@ -73,7 +71,7 @@ gcloud config set project $PROJECT_ID
 # Build and deploy
 echo "Building and deploying..."
 gcloud run deploy $SERVICE_NAME \
-    --source . \
+    --source . --clear-base-image \
     --region $REGION \
     --platform managed \
     --allow-unauthenticated \
@@ -88,9 +86,7 @@ echo ""
 echo "✅ Deployment complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Copy the HMAC_SECRET above"
-echo "  2. Update APP_HMAC_KEY in app.html with that value"
-echo "  3. Approve devices with:"
+echo "  1. Approve devices with:"
 echo "     curl -X POST <URL>/admin/approve \\"
 echo "       -H 'Content-Type: application/json' \\"
 echo "       -H 'X-Admin-Key: $ADMIN_KEY' \\"
