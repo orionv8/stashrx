@@ -1231,6 +1231,9 @@ window.handleImport = async function(event) {
             return;
         }
 
+        // Show syncing feedback
+        iosAlert("Syncing your data to the cloud...", "Syncing");
+
         try {
             const deviceId = getDeviceID();
             const inv = await db.inventory.toArray();
@@ -1240,7 +1243,7 @@ window.handleImport = async function(event) {
             if (db.customers) {
                  cus = await db.customers.toArray();
             }
-            
+
             const backupPayload = JSON.stringify({
                 lastSync: new Date().toISOString(),
                 inventory: JSON.stringify(inv),
@@ -1248,12 +1251,36 @@ window.handleImport = async function(event) {
                 expenses: JSON.stringify(exp),
                 customers: JSON.stringify(cus)
             });
-            
+
             const storageRef = firebase.storage().ref();
             const backupRef = storageRef.child('backups/' + deviceId + '.json');
             await backupRef.putString(backupPayload, 'raw', { contentType: 'application/json' });
-            
-            iosAlert("Your data has been successfully saved to the cloud.", "Sync Complete");
+
+            // Also save to Firestore for backward compatibility
+            try {
+                if (typeof firebase.firestore === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const s = document.createElement('script');
+                        s.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js";
+                        s.onload = resolve;
+                        s.onerror = reject;
+                        document.head.appendChild(s);
+                    });
+                }
+                const fdb = firebase.firestore();
+                await fdb.collection('stashRx_Backups').doc(deviceId).set({
+                    lastSync: new Date().toISOString(),
+                    inventory: JSON.stringify(inv),
+                    sales: JSON.stringify(sal),
+                    expenses: JSON.stringify(exp),
+                    customers: JSON.stringify(cus)
+                });
+            } catch(fsErr) {
+                console.log("Firestore mirror sync skipped:", fsErr.message);
+            }
+
+            const syncTime = new Date().toLocaleTimeString();
+            iosAlert("Sync complete! Your data was saved to the cloud at " + syncTime + ". (Device ID: " + deviceId + ")", "Sync Successful ✓");
         } catch(syncErr) {
             console.error("Manual cloud sync failed:", syncErr);
             iosAlert("Sync failed: " + syncErr.message + ". Please check your internet connection and try again.", "Sync Failed");
@@ -1278,16 +1305,47 @@ window.handleImport = async function(event) {
 
         try {
             const deviceId = getDeviceID();
-            const storageRef = firebase.storage().ref();
-            const backupRef = storageRef.child('backups/' + deviceId + '.json');
-            
-            let backupData;
+            let backupData = null;
+            let restoredFrom = '';
+
+            // --- Try Firebase Storage first (new system) ---
             try {
+                const storageRef = firebase.storage().ref();
+                const backupRef = storageRef.child('backups/' + deviceId + '.json');
                 const url = await backupRef.getDownloadURL();
                 const response = await fetch(url);
                 backupData = await response.json();
-            } catch(err) {
-                iosAlert("No cloud backup could be found for this Device ID.", "Error");
+                restoredFrom = 'Cloud Storage';
+            } catch(storageErr) {
+                console.log("No Storage backup found, trying Firestore...");
+            }
+
+            // --- Fallback: Try Cloud Firestore (old system) ---
+            if (!backupData) {
+                try {
+                    // Load Firestore SDK if not already loaded
+                    if (typeof firebase.firestore === 'undefined') {
+                        await new Promise((resolve, reject) => {
+                            const s = document.createElement('script');
+                            s.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js";
+                            s.onload = resolve;
+                            s.onerror = reject;
+                            document.head.appendChild(s);
+                        });
+                    }
+                    const fdb = firebase.firestore();
+                    const doc = await fdb.collection('stashRx_Backups').doc(deviceId).get();
+                    if (doc.exists) {
+                        backupData = doc.data();
+                        restoredFrom = 'Firestore (legacy)';
+                    }
+                } catch(firestoreErr) {
+                    console.error("Firestore fallback failed:", firestoreErr);
+                }
+            }
+
+            if (!backupData) {
+                iosAlert("No cloud backup could be found for Device ID: " + deviceId + ". Make sure you are using the same device that created the backup.", "Not Found");
                 return;
             }
 
@@ -1308,15 +1366,39 @@ window.handleImport = async function(event) {
                 if (customersData.length > 0) await db.customers.bulkAdd(customersData);
             });
 
-            iosAlert("Restore complete! Your data has been restored from the cloud.", "Success");
-            
+            // If restored from Firestore, auto-migrate to Storage for future syncs
+            if (restoredFrom === 'Firestore (legacy)') {
+                try {
+                    const inv = await db.inventory.toArray();
+                    const sal = await db.sales.toArray();
+                    const exp = await db.expenses.toArray();
+                    let cus = [];
+                    if (db.customers) cus = await db.customers.toArray();
+                    const migrationPayload = JSON.stringify({
+                        lastSync: new Date().toISOString(),
+                        inventory: JSON.stringify(inv),
+                        sales: JSON.stringify(sal),
+                        expenses: JSON.stringify(exp),
+                        customers: JSON.stringify(cus)
+                    });
+                    const storageRef = firebase.storage().ref();
+                    const backupRef = storageRef.child('backups/' + deviceId + '.json');
+                    await backupRef.putString(migrationPayload, 'raw', { contentType: 'application/json' });
+                    console.log("Auto-migrated Firestore backup to Storage");
+                } catch(migErr) {
+                    console.error("Auto-migration to Storage failed (non-critical):", migErr);
+                }
+            }
+
+            iosAlert("Restore complete! Your data has been restored from the cloud. (Source: " + restoredFrom + ")", "Success");
+
             if (typeof loadInventory === 'function') { await loadInventory(); }
             if (typeof updateDashboardStats === 'function') { await updateDashboardStats(); }
             if (typeof renderInventoryStatus === 'function') { await renderInventoryStatus(); }
 
         } catch (err) {
             console.error("Cloud restore failed:", err);
-            iosAlert("An error occurred while restoring your data. Please check your internet connection.", "Error");
+            iosAlert("An error occurred while restoring your data: " + err.message, "Error");
         }
     }
 
