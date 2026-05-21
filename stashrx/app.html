@@ -815,6 +815,8 @@ window.onload = async function(e) {
 let cashflowChart = null;
 let topItemsChart = null;
 
+let expenseBreakdownChart = null;
+
 async function updateCharts() {
     const startInput = document.getElementById('reportStartDate').value;
     const endInput = document.getElementById('reportEndDate').value;
@@ -825,11 +827,58 @@ async function updateCharts() {
     const startDate = new Date(startStr);
     const endDate = new Date(endStr);
 
-    const sales = await db.sales.toArray();
-    const expenses = await db.expenses.toArray();
+    const allSales = await db.sales.toArray();
+    const allExpenses = await db.expenses.toArray();
 
-    // 1. Prepare Revenue vs Expenses (Daily grouping)
-    // Create a dictionary of dates
+    // Filter to date range
+    const sales = allSales.filter(s => { const d = new Date(s.date); return d >= startDate && d <= endDate; });
+    const expenses = allExpenses.filter(e => { const d = new Date(e.date); return d >= startDate && d <= endDate; });
+
+    // ─── Enhanced Stats ───
+    const totalSales = sales.reduce((s, sale) => s + (sale.total || 0), 0);
+    const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+    const netProfit = totalSales - totalExpenses;
+    const txnCount = sales.length + expenses.length;
+    const avgSale = sales.length > 0 ? totalSales / sales.length : 0;
+    const margin = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0;
+    const itemsSold = sales.reduce((sum, s) => sum + (s.items ? s.items.reduce((q, i) => q + (i.qty || 1), 0) : 0), 0);
+
+    const fmt = (v) => '₱' + Math.abs(v).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    document.getElementById('statTodaySales').textContent = fmt(totalSales);
+    document.getElementById('statTodayExp').textContent = fmt(totalExpenses);
+
+    const netEl = document.getElementById('statNetProfit');
+    if (netEl) {
+        netEl.textContent = (netProfit < 0 ? '-' : '') + fmt(netProfit);
+        const netCard = netEl.closest('div[class*="border"]');
+        if (netCard) {
+            if (netProfit >= 0) {
+                netCard.className = 'bg-blue-50 border border-blue-100 rounded-xl p-3.5 shadow-sm';
+                netEl.className = 'text-[18px] font-bold text-blue-600 tracking-tight';
+            } else {
+                netCard.className = 'bg-orange-50 border border-orange-100 rounded-xl p-3.5 shadow-sm';
+                netEl.className = 'text-[18px] font-bold text-orange-600 tracking-tight';
+            }
+        }
+    }
+
+    const txnEl = document.getElementById('statTxnCount');
+    if (txnEl) txnEl.textContent = txnCount.toLocaleString();
+
+    const avgEl = document.getElementById('statAvgSale');
+    if (avgEl) avgEl.textContent = fmt(avgSale);
+
+    const marginEl = document.getElementById('statMargin');
+    if (marginEl) {
+        marginEl.textContent = margin.toFixed(1) + '%';
+        marginEl.className = 'text-[16px] font-bold tracking-tight ' + (margin >= 0 ? 'text-emerald-600' : 'text-red-500');
+    }
+
+    const itemsEl = document.getElementById('statItemsSold');
+    if (itemsEl) itemsEl.textContent = itemsSold.toLocaleString();
+
+    // ─── 1. Revenue vs Expenses (Daily grouping) ───
     let datesDict = {};
     let tempDate = new Date(startDate);
     while (tempDate <= endDate) {
@@ -839,24 +888,17 @@ async function updateCharts() {
     }
 
     sales.forEach(sale => {
-        let d = new Date(sale.date);
-        if (d >= startDate && d <= endDate) {
-            let dStr = d.toISOString().split('T')[0];
-            if (datesDict[dStr]) datesDict[dStr].sales += sale.total;
-        }
+        let dStr = new Date(sale.date).toISOString().split('T')[0];
+        if (datesDict[dStr]) datesDict[dStr].sales += sale.total;
     });
 
     expenses.forEach(exp => {
-        let d = new Date(exp.date);
-        if (d >= startDate && d <= endDate) {
-            let dStr = d.toISOString().split('T')[0];
-            if (datesDict[dStr]) datesDict[dStr].expenses += exp.amount;
-        }
+        let dStr = new Date(exp.date).toISOString().split('T')[0];
+        if (datesDict[dStr]) datesDict[dStr].expenses += exp.amount;
     });
 
     const labels = Object.keys(datesDict).map(d => {
-        let dateObj = new Date(d);
-        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     });
     const salesData = Object.values(datesDict).map(v => v.sales);
     const expData = Object.values(datesDict).map(v => v.expenses);
@@ -880,7 +922,7 @@ async function updateCharts() {
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: {
-                    x: { grid: { display: false } },
+                    x: { grid: { display: false }, ticks: { maxRotation: 45, font: {size: 9} } },
                     y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f4f6' } }
                 },
                 plugins: { legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, font: {size: 10} } } }
@@ -888,21 +930,58 @@ async function updateCharts() {
         });
     }
 
-    // 2. Prepare Top 10 Fast Moving Items
+    // ─── 2. Expense Breakdown by Category (Doughnut) ───
+    const expByCategory = {};
+    expenses.forEach(e => {
+        const cat = e.category || 'Other';
+        expByCategory[cat] = (expByCategory[cat] || 0) + (e.amount || 0);
+    });
+
+    const catLabels = Object.keys(expByCategory);
+    const catData = Object.values(expByCategory);
+    const catColors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#f43f5e', '#84cc16', '#6366f1'];
+
+    if (expenseBreakdownChart) {
+        expenseBreakdownChart.data.labels = catLabels;
+        expenseBreakdownChart.data.datasets[0].data = catData;
+        expenseBreakdownChart.data.datasets[0].backgroundColor = catColors.slice(0, catLabels.length);
+        expenseBreakdownChart.update();
+    } else {
+        const ctx3 = document.getElementById('chartExpenseBreakdown');
+        if (ctx3) {
+            expenseBreakdownChart = new Chart(ctx3.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: catLabels,
+                    datasets: [{
+                        data: catData,
+                        backgroundColor: catColors.slice(0, catLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: {size: 10}, padding: 8 } }
+                    }
+                }
+            });
+        }
+    }
+
+    // ─── 3. Top 10 Fast Moving Items ───
     let itemSales = {};
     sales.forEach(sale => {
-        let d = new Date(sale.date);
-        if (d >= startDate && d <= endDate) {
-            if (sale.items) {
-                sale.items.forEach(item => {
-                    if (!itemSales[item.id]) itemSales[item.id] = { qty: 0, name: '' };
-                    itemSales[item.id].qty += item.qty;
-                });
-            }
+        if (sale.items) {
+            sale.items.forEach(item => {
+                if (!itemSales[item.id]) itemSales[item.id] = { qty: 0 };
+                itemSales[item.id].qty += item.qty;
+            });
         }
     });
 
-    // We need item names. Let's get them from inventory
     const inventory = await db.inventory.toArray();
     let inventoryMap = {};
     inventory.forEach(i => {
@@ -972,8 +1051,166 @@ function closeAnalyticsModal() {
     }, 200);
 }
 
-// Remove the hook that runs updateCharts automatically on updateDashboardStats
-window.updateDashboardStats = originalUpdateDashboardStats;
+// ═══════════════════════════════════════════════════════════════
+// Dashboard Override: Date-grouped transaction log + enhanced stats
+// ═══════════════════════════════════════════════════════════════
+window.updateDashboardStats = async function() {
+    const startInput = document.getElementById('reportStartDate').value;
+    const endInput = document.getElementById('reportEndDate').value;
+    if (!startInput || !endInput) return;
+
+    const startDate = new Date(startInput + 'T00:00:00');
+    const endDate = new Date(endInput + 'T23:59:59');
+
+    const allSales = await db.sales.toArray();
+    const allExpenses = await db.expenses.toArray();
+
+    // Filter by date range
+    const sales = allSales.filter(s => {
+        const d = new Date(s.date);
+        return d >= startDate && d <= endDate;
+    });
+    const expenses = allExpenses.filter(e => {
+        const d = new Date(e.date);
+        return d >= startDate && d <= endDate;
+    });
+
+    // Calculate totals for stat cards
+    const totalSales = sales.reduce((sum, s) => sum + (s.total || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    document.getElementById('statTodaySales').textContent = '₱' + totalSales.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('statTodayExp').textContent = '₱' + totalExpenses.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    // Build combined transaction list
+    const transactions = [];
+    sales.forEach(s => {
+        const itemCount = s.items ? s.items.reduce((sum, i) => sum + (i.qty || 1), 0) : 0;
+        const itemNames = s.items ? s.items.map(i => i.brand || i.generic || i.name || 'Item').slice(0, 3) : [];
+        const hasDiscount = s.discountDetails && s.discountDetails.idNumber;
+        transactions.push({
+            type: 'sale',
+            date: new Date(s.date),
+            amount: s.total || 0,
+            itemCount: itemCount,
+            itemNames: itemNames,
+            totalItems: s.items ? s.items.length : 0,
+            hasDiscount: hasDiscount,
+            id: s.id
+        });
+    });
+    expenses.forEach(e => {
+        transactions.push({
+            type: 'expense',
+            date: new Date(e.date),
+            amount: e.amount || 0,
+            category: e.category || 'Other',
+            description: e.description || '',
+            id: e.id
+        });
+    });
+
+    // Sort by date descending (newest first)
+    transactions.sort((a, b) => b.date - a.date);
+
+    // Group by date string
+    const grouped = {};
+    transactions.forEach(t => {
+        const dateKey = t.date.toISOString().split('T')[0];
+        if (!grouped[dateKey]) grouped[dateKey] = [];
+        grouped[dateKey].push(t);
+    });
+
+    // Render with date dividers
+    const listEl = document.getElementById('dashboardReportList');
+    let html = '';
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(dateKey => {
+        // Date header
+        let dateLabel;
+        if (dateKey === today) {
+            dateLabel = 'Today';
+        } else if (dateKey === yesterday) {
+            dateLabel = 'Yesterday';
+        } else {
+            const d = new Date(dateKey + 'T12:00:00');
+            dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+
+        // Daily subtotals
+        const daySales = grouped[dateKey].filter(t => t.type === 'sale').reduce((s, t) => s + t.amount, 0);
+        const dayExpenses = grouped[dateKey].filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+        const dayNet = daySales - dayExpenses;
+
+        html += '<div class="mt-4 mb-2 first:mt-0">';
+        html += '  <div class="flex items-center justify-between px-1 mb-1">';
+        html += '    <div class="flex items-center gap-2">';
+        html += '      <span class="text-[13px] font-bold text-gray-800">' + dateLabel + '</span>';
+        html += '      <span class="text-[10px] text-gray-400 font-medium">' + grouped[dateKey].length + ' transaction' + (grouped[dateKey].length !== 1 ? 's' : '') + '</span>';
+        html += '    </div>';
+        html += '    <span class="text-[11px] font-semibold ' + (dayNet >= 0 ? 'text-emerald-600' : 'text-red-500') + '">net ₱' + Math.abs(dayNet).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
+        html += '  </div>';
+        html += '  <div class="h-[1px] bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-full"></div>';
+        html += '</div>';
+
+        // Render each transaction in this group
+        grouped[dateKey].forEach(t => {
+            const timeStr = t.date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+            if (t.type === 'sale') {
+                const itemSummary = t.itemNames.join(', ') + (t.totalItems > 3 ? ' +' + (t.totalItems - 3) + ' more' : '');
+                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2">';
+                html += '  <div class="flex justify-between items-start">';
+                html += '    <div class="flex-grow min-w-0">';
+                html += '      <div class="flex items-center gap-2">';
+                html += '        <div class="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">';
+                html += '          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                html += '        </div>';
+                html += '        <div class="min-w-0">';
+                html += '          <span class="text-[14px] font-semibold text-gray-900">Sale</span>';
+                html += '          <span class="text-[11px] text-gray-400 ml-1.5">' + timeStr + '</span>';
+                if (t.hasDiscount) html += '          <span class="text-[9px] bg-blue-50 text-blue-600 font-bold px-1.5 py-0.5 rounded-full ml-1">SC/PWD</span>';
+                html += '        </div>';
+                html += '      </div>';
+                if (t.itemCount > 0) {
+                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-9 truncate">' + t.itemCount + ' item' + (t.itemCount !== 1 ? 's' : '') + (itemSummary ? ' — ' + itemSummary : '') + '</p>';
+                }
+                html += '    </div>';
+                html += '    <span class="text-[15px] font-bold text-emerald-600 flex-shrink-0 ml-2">₱' + t.amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
+                html += '  </div>';
+                html += '</div>';
+            } else {
+                const catIcons = { 'Restock': '📦', 'Utilities': '💡', 'Salary': '👤', 'Supplies': '🧹', 'Other': '📋' };
+                const icon = catIcons[t.category] || '📋';
+                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2">';
+                html += '  <div class="flex justify-between items-start">';
+                html += '    <div class="flex-grow min-w-0">';
+                html += '      <div class="flex items-center gap-2">';
+                html += '        <div class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0 text-[13px]">' + icon + '</div>';
+                html += '        <div class="min-w-0">';
+                html += '          <span class="text-[14px] font-semibold text-gray-900">' + t.category + '</span>';
+                html += '          <span class="text-[11px] text-gray-400 ml-1.5">' + timeStr + '</span>';
+                html += '        </div>';
+                html += '      </div>';
+                if (t.description) {
+                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-9 truncate">' + t.description + '</p>';
+                }
+                html += '    </div>';
+                html += '    <span class="text-[15px] font-bold text-red-500 flex-shrink-0 ml-2">-₱' + t.amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
+                html += '  </div>';
+                html += '</div>';
+            }
+        });
+    });
+
+    if (transactions.length === 0) {
+        html = '<div class="text-center py-12 text-gray-400"><p class="text-[14px] font-medium">No transactions</p><p class="text-[12px] mt-1">Adjust the date range above</p></div>';
+    }
+
+    listEl.innerHTML = html;
+};
 
 </script>
 
@@ -987,23 +1224,57 @@ window.updateDashboardStats = originalUpdateDashboardStats;
                 <div class="w-[45px]"></div>
             </div>
             <div class="p-4 overflow-y-auto space-y-4 pb-12">
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
-                    <div class="text-[20px] font-bold text-emerald-600" id="statTodaySales">₱0.00</div>
-                    <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-500 mt-1">Sales</div>
+                <!-- Summary Cards: 2x2 Grid -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 shadow-sm">
+                        <div class="text-[18px] font-bold text-emerald-600 tracking-tight" id="statTodaySales">₱0.00</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-emerald-500 mt-0.5">Total Sales</div>
+                    </div>
+                    <div class="bg-red-50 border border-red-100 rounded-xl p-3.5 shadow-sm">
+                        <div class="text-[18px] font-bold text-red-600 tracking-tight" id="statTodayExp">₱0.00</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-red-500 mt-0.5">Expenses</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3.5 shadow-sm">
+                        <div class="text-[18px] font-bold text-blue-600 tracking-tight" id="statNetProfit">₱0.00</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-blue-500 mt-0.5">Net Profit</div>
+                    </div>
+                    <div class="bg-purple-50 border border-purple-100 rounded-xl p-3.5 shadow-sm">
+                        <div class="text-[18px] font-bold text-purple-600 tracking-tight" id="statTxnCount">0</div>
+                        <div class="text-[10px] uppercase tracking-wider font-bold text-purple-500 mt-0.5">Transactions</div>
+                    </div>
                 </div>
-                <div class="bg-red-50 border border-red-100 rounded-xl p-4 shadow-sm flex flex-col justify-center">
-                    <div class="text-[20px] font-bold text-red-600" id="statTodayExp">₱0.00</div>
-                    <div class="text-[10px] uppercase tracking-wider font-bold text-red-500 mt-1">Expenses</div>
+
+                <!-- Avg Sale & Margin Strip -->
+                <div class="flex gap-3">
+                    <div class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
+                        <div class="text-[16px] font-bold text-gray-800" id="statAvgSale">₱0.00</div>
+                        <div class="text-[9px] uppercase tracking-wider font-semibold text-gray-400 mt-0.5">Avg Sale</div>
+                    </div>
+                    <div class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
+                        <div class="text-[16px] font-bold text-gray-800" id="statMargin">0%</div>
+                        <div class="text-[9px] uppercase tracking-wider font-semibold text-gray-400 mt-0.5">Profit Margin</div>
+                    </div>
+                    <div class="flex-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
+                        <div class="text-[16px] font-bold text-gray-800" id="statItemsSold">0</div>
+                        <div class="text-[9px] uppercase tracking-wider font-semibold text-gray-400 mt-0.5">Items Sold</div>
+                    </div>
                 </div>
-            </div>
-                
+
                 <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
                     <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Revenue vs Expenses</h3>
                     <div class="relative h-[250px] w-full">
                         <canvas id="chartCashflow"></canvas>
                     </div>
                 </div>
+
+                <!-- Expense Breakdown -->
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Expense Breakdown</h3>
+                    <div class="relative h-[220px] w-full">
+                        <canvas id="chartExpenseBreakdown"></canvas>
+                    </div>
+                </div>
+
                 <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
                     <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Top 10 Fast Moving</h3>
                     <div class="relative h-[300px] w-full">
