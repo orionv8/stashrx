@@ -1281,14 +1281,14 @@ window.handleImport = async function(event) {
 async function showPremiumModal() {
     const deviceID = getDeviceID();
     const existingKey = localStorage.getItem("stashRx_license") || "";
-    const instructions = \`
+    const instructions = `
         <div class="text-left text-sm mb-4 text-gray-600">
             <p class="mb-2">You are using the free version with a <strong>100 item inventory limit</strong>.</p>
-            <p class="bg-gray-100 p-2 rounded font-mono text-center mb-3">Device ID: <b class="text-emerald-600 select-all">\${deviceID}</b></p>
+            <p class="bg-gray-100 p-2 rounded font-mono text-center mb-3">Device ID: <b class="text-emerald-600 select-all">${deviceID}</b></p>
             <p class="mb-2">To unlock, enter your license key below:</p>
             <p class="text-xs">For premium access, <a href="mailto:orionv888@gmail.com" class="text-emerald-500 underline font-bold">contact us</a>.</p>
         </div>
-    \`;
+    `;
     const key = await iosPrompt(instructions, existingKey, "stashRx Premium");
     if (key) {
         const isValid = await validateLicenseKey(key);
