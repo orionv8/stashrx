@@ -1166,55 +1166,7 @@ window.handleImport = async function(event) {
 })();
 
     
-    async function migrateData() {
-        if (!isPremium) {
-            iosAlert("Premium required.", "Error");
-            return;
-        }
-        
-        try {
-            if (typeof firebase === 'undefined') {
-                iosAlert("Firebase not loaded yet.", "Error");
-                return;
-            }
-            
-            // We need firestore back just for this one function
-            await new Promise((resolve) => {
-                const s = document.createElement('script');
-                s.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js";
-                s.onload = resolve;
-                document.head.appendChild(s);
-            });
-            
-            const fdb = firebase.firestore();
-            const storageRef = firebase.storage().ref();
-            const deviceId = getDeviceID();
-            
-            const doc = await fdb.collection('stashRx_Backups').doc(deviceId).get();
-            if (!doc.exists) {
-                iosAlert("No old Firestore backup found for this device.", "Result");
-                return;
-            }
-            
-            const data = doc.data();
-            const backupPayload = JSON.stringify({
-                lastSync: new Date().toISOString(),
-                inventory: data.inventory || '[]',
-                sales: data.sales || '[]',
-                expenses: data.expenses || '[]',
-                customers: data.customers || '[]'
-            });
-            
-            const backupRef = storageRef.child('backups/' + deviceId + '.json');
-            await backupRef.putString(backupPayload, 'raw', { contentType: 'application/json' });
-            
-            iosAlert("Successfully migrated your old backup to the new Cloud Storage system! You can now use the Restore button.", "Migration Complete");
-            
-        } catch(e) {
-            console.error(e);
-            iosAlert("Migration failed: " + e.message, "Error");
-        }
-    }
+    // migrateData() removed — Firestore is no longer used
 
     
     async function manualSyncToCloud() {
@@ -1256,29 +1208,6 @@ window.handleImport = async function(event) {
             const backupRef = storageRef.child('backups/' + deviceId + '.json');
             await backupRef.putString(backupPayload, 'raw', { contentType: 'application/json' });
 
-            // Also save to Firestore for backward compatibility
-            try {
-                if (typeof firebase.firestore === 'undefined') {
-                    await new Promise((resolve, reject) => {
-                        const s = document.createElement('script');
-                        s.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js";
-                        s.onload = resolve;
-                        s.onerror = reject;
-                        document.head.appendChild(s);
-                    });
-                }
-                const fdb = firebase.firestore();
-                await fdb.collection('stashRx_Backups').doc(deviceId).set({
-                    lastSync: new Date().toISOString(),
-                    inventory: JSON.stringify(inv),
-                    sales: JSON.stringify(sal),
-                    expenses: JSON.stringify(exp),
-                    customers: JSON.stringify(cus)
-                });
-            } catch(fsErr) {
-                console.log("Firestore mirror sync skipped:", fsErr.message);
-            }
-
             const syncTime = new Date().toLocaleTimeString();
             iosAlert("Sync complete! Your data was saved to the cloud at " + syncTime + ". (Device ID: " + deviceId + ")", "Sync Successful ✓");
         } catch(syncErr) {
@@ -1305,47 +1234,16 @@ window.handleImport = async function(event) {
 
         try {
             const deviceId = getDeviceID();
-            let backupData = null;
-            let restoredFrom = '';
+            const storageRef = firebase.storage().ref();
+            const backupRef = storageRef.child('backups/' + deviceId + '.json');
 
-            // --- Try Firebase Storage first (new system) ---
+            let backupData;
             try {
-                const storageRef = firebase.storage().ref();
-                const backupRef = storageRef.child('backups/' + deviceId + '.json');
                 const url = await backupRef.getDownloadURL();
                 const response = await fetch(url);
                 backupData = await response.json();
-                restoredFrom = 'Cloud Storage';
-            } catch(storageErr) {
-                console.log("No Storage backup found, trying Firestore...");
-            }
-
-            // --- Fallback: Try Cloud Firestore (old system) ---
-            if (!backupData) {
-                try {
-                    // Load Firestore SDK if not already loaded
-                    if (typeof firebase.firestore === 'undefined') {
-                        await new Promise((resolve, reject) => {
-                            const s = document.createElement('script');
-                            s.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js";
-                            s.onload = resolve;
-                            s.onerror = reject;
-                            document.head.appendChild(s);
-                        });
-                    }
-                    const fdb = firebase.firestore();
-                    const doc = await fdb.collection('stashRx_Backups').doc(deviceId).get();
-                    if (doc.exists) {
-                        backupData = doc.data();
-                        restoredFrom = 'Firestore (legacy)';
-                    }
-                } catch(firestoreErr) {
-                    console.error("Firestore fallback failed:", firestoreErr);
-                }
-            }
-
-            if (!backupData) {
-                iosAlert("No cloud backup could be found for Device ID: " + deviceId + ". Make sure you are using the same device that created the backup.", "Not Found");
+            } catch(err) {
+                iosAlert("No cloud backup found for Device ID: " + deviceId + ". Sync your data first, or make sure you are on the same device.", "Not Found");
                 return;
             }
 
@@ -1366,31 +1264,8 @@ window.handleImport = async function(event) {
                 if (customersData.length > 0) await db.customers.bulkAdd(customersData);
             });
 
-            // If restored from Firestore, auto-migrate to Storage for future syncs
-            if (restoredFrom === 'Firestore (legacy)') {
-                try {
-                    const inv = await db.inventory.toArray();
-                    const sal = await db.sales.toArray();
-                    const exp = await db.expenses.toArray();
-                    let cus = [];
-                    if (db.customers) cus = await db.customers.toArray();
-                    const migrationPayload = JSON.stringify({
-                        lastSync: new Date().toISOString(),
-                        inventory: JSON.stringify(inv),
-                        sales: JSON.stringify(sal),
-                        expenses: JSON.stringify(exp),
-                        customers: JSON.stringify(cus)
-                    });
-                    const storageRef = firebase.storage().ref();
-                    const backupRef = storageRef.child('backups/' + deviceId + '.json');
-                    await backupRef.putString(migrationPayload, 'raw', { contentType: 'application/json' });
-                    console.log("Auto-migrated Firestore backup to Storage");
-                } catch(migErr) {
-                    console.error("Auto-migration to Storage failed (non-critical):", migErr);
-                }
-            }
-
-            iosAlert("Restore complete! Your data has been restored from the cloud. (Source: " + restoredFrom + ")", "Success");
+            const lastSync = backupData.lastSync ? new Date(backupData.lastSync).toLocaleString() : 'unknown';
+            iosAlert("Restore complete! Data restored from backup created at " + lastSync + ".", "Success ✓");
 
             if (typeof loadInventory === 'function') { await loadInventory(); }
             if (typeof updateDashboardStats === 'function') { await updateDashboardStats(); }
