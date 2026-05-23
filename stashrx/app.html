@@ -220,7 +220,7 @@
 <body class="bg-[#F2F2F7] text-gray-900 h-screen flex flex-col overflow-hidden">
 
     <!-- Glass Header -->
-    <header class="glass-header z-20 flex-shrink-0 pt-2 pb-3 px-4 fixed top-0 w-full">
+    <header class="glass-header z-20 flex-shrink-0 pb-3 px-4 fixed top-0 w-full" style="padding-top: calc(env(safe-area-inset-top, 8px) + 4px);">
         <div class="flex justify-between items-center mb-3 relative">
             <button onclick="toggleMenu()" class="text-emerald-500 text-2xl p-2 -ml-1 active:opacity-50 transition relative z-10 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl active:bg-emerald-50">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -364,7 +364,7 @@
 
                     <!-- Close Button -->
                     <div class="settings-close-area p-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
-                        <button onclick="toggleSettingsMenu()" class="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-xl active:bg-gray-300 transition text-sm min-h-[44px]">Close</button>
+                        <button onclick="toggleSettingsMenu()" class="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-xl active:bg-gray-300 transition text-sm min-h-[44px] flex items-center justify-center text-center">Close</button>
                     </div>
                 </div>
 
@@ -395,7 +395,7 @@
     <!-- Screens Container -->
     <div id="screenLedger" class="flex-grow flex flex-col h-full overflow-hidden">
         <!-- Main Content List -->
-        <main class="flex-grow overflow-y-auto pt-[110px] pb-24 px-4" id="inventoryList">
+        <main class="flex-grow overflow-y-auto pt-[125px] pb-24 px-4" id="inventoryList">
             <!-- Items will be injected here by Dexie.js -->
         </main>
 
@@ -412,7 +412,7 @@
     <!-- Expenses Screen (Hidden by default) -->
     <div id="screenExpenses" class="flex-grow hidden flex-col h-full overflow-hidden bg-[#F2F2F7]">
         <!-- Sticky Header Form for Expenses -->
-        <div class="pt-[74px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]">
+        <div class="pt-[90px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]">
             <div class="bg-white rounded-2xl shadow-sm p-4 mb-3 mt-0">
                 <div class="space-y-3">
                     <div>
@@ -450,7 +450,7 @@
 
     <!-- Dashboard Screen (Hidden by default) -->
     <div id="screenDashboard" class="flex-grow hidden flex-col h-full overflow-hidden bg-[#F2F2F7]">
-        <div class="pt-[74px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]">
+        <div class="pt-[90px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]">
             <!-- Date Range Filter -->
             <div class="flex items-center space-x-2 mb-4 mt-0 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
                 <input type="date" id="reportStartDate" class="flex-grow bg-gray-50 border border-gray-200 rounded-lg text-[13px] text-gray-700 outline-none text-center font-medium px-2 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" onchange="updateDashboardStats()">
@@ -478,7 +478,7 @@
     <!-- Inventory Screen (Hidden by default) -->
     <div id="screenInventory" class="flex-grow hidden flex-col h-full overflow-hidden bg-[#F2F2F7]">
         <!-- Sticky Header for Search padding -->
-        <div class="pt-[110px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]"></div>
+        <div class="pt-[125px] px-4 flex-shrink-0 z-10 bg-[#F2F2F7]"></div>
         
         <!-- Scrolling List for Inventory Status -->
         <main class="flex-grow overflow-y-auto px-4 pb-24 relative">
@@ -832,8 +832,19 @@ let topItemsChart = null;
 let expenseBreakdownChart = null;
 
 async function updateCharts() {
-    const startInput = document.getElementById('reportStartDate').value;
-    const endInput = document.getElementById('reportEndDate').value;
+    // Auto-set date range if empty (default to current month)
+    const startEl = document.getElementById('reportStartDate');
+    const endEl = document.getElementById('reportEndDate');
+    if (!startEl.value) {
+        const now = new Date();
+        startEl.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    }
+    if (!endEl.value) {
+        const now = new Date();
+        endEl.value = now.toISOString().split('T')[0];
+    }
+    const startInput = startEl.value;
+    const endInput = endEl.value;
     if (!startInput || !endInput) return;
 
     const startStr = startInput + "T00:00:00";
@@ -1107,8 +1118,19 @@ async function showExpenseDetail(expId) {
 // Dashboard Override: Date-grouped transaction log + enhanced stats
 // ═══════════════════════════════════════════════════════════════
 window.updateDashboardStats = async function() {
-    const startInput = document.getElementById('reportStartDate').value;
-    const endInput = document.getElementById('reportEndDate').value;
+    // Auto-set date range if empty (default to current month)
+    const startEl = document.getElementById('reportStartDate');
+    const endEl = document.getElementById('reportEndDate');
+    if (!startEl.value) {
+        const now = new Date();
+        startEl.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    }
+    if (!endEl.value) {
+        const now = new Date();
+        endEl.value = now.toISOString().split('T')[0];
+    }
+    const startInput = startEl.value;
+    const endInput = endEl.value;
     if (!startInput || !endInput) return;
 
     const startDate = new Date(startInput + 'T00:00:00');
