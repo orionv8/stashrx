@@ -1303,225 +1303,98 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         function resetSettingsMenu() {
-        const mainNav = document.getElementById('mainNavPanel');
-        const settingsNav = document.getElementById('settingsNavPanel');
-        if (settingsNav) settingsNav.classList.add('translate-y-full');
-        if (mainNav) mainNav.classList.remove('-translate-y-full');
-    }
-
-    function toggleSettingsMenu() {
-        const mainNav = document.getElementById('mainNavPanel');
-        const settingsNav = document.getElementById('settingsNavPanel');
-        
-        if (settingsNav.classList.contains('translate-y-full')) {
-            // Open Settings: Slide Settings UP, Main UP
-            settingsNav.classList.remove('translate-y-full');
-            mainNav.classList.add('-translate-y-full');
-        } else {
-            // Close Settings
-            settingsNav.classList.add('translate-y-full');
-            mainNav.classList.remove('-translate-y-full');
-        }
-    }
-
-
-// =======================================================================
-// SECURE LICENSE SYSTEM v2 — Authenticated + Whitelist
-// =======================================================================
-// Security layers:
-//   1. HMAC-signed requests (prevents unauthorized API calls)
-//   2. Server-side device whitelist (only approved devices get keys)
-//   3. Cryptographic key validation (no more length-only fallback)
-//   4. Trusted key storage (server-verified keys cached for offline use)
-//
-// Uses the existing global isPremium — do NOT redeclare it.
-
-var LICENSE_ENDPOINT = "https://generate-license-330835001360.asia-southeast1.run.app";
-
-// HMAC signing key — must match HMAC_SECRET on the server.
-// Replace this value after deploying the new server.
-// --- HMAC-SHA256 helper (Web Crypto API) ---
-, false, ["sign"]
-    );
-    var sigBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
-    var sigArray = Array.from(new Uint8Array(sigBuffer));
-    return sigArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
-}
-
-// --- Fetch license from Cloud Run (HMAC-authenticated) ---
-async function getAndValidateLicense(deviceId) {
-    try {
-        var response = await fetch(LICENSE_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                deviceId: deviceId
-            })
-        });
-
-        var data = await response.json();
-
-        if (!response.ok) {
-            // Return the server error message for user feedback
-            return { error: data.error || "Server error", key: false };
+            const mainNav = document.getElementById('mainNavPanel');
+            const settingsNav = document.getElementById('settingsNavPanel');
+            if (settingsNav) settingsNav.classList.add('translate-y-full');
+            if (mainNav) mainNav.classList.remove('-translate-y-full');
         }
 
-        if (data.licenseKey) {
-            // Basic format validation before trusting
-            var parts = data.licenseKey.split('-');
-            if (parts.length === 3 && parts[0] === deviceId && /^\d{8}$/.test(parts[1]) && /^[0-9A-Fa-f]{64}$/.test(parts[2])) {
-                // Mark as server-verified (trusted for offline validation)
-                localStorage.setItem("stashRx_license_trusted", data.licenseKey);
-                return { error: null, key: data.licenseKey };
+        function toggleSettingsMenu() {
+            const mainNav = document.getElementById('mainNavPanel');
+            const settingsNav = document.getElementById('settingsNavPanel');
+
+            if (settingsNav.classList.contains('translate-y-full')) {
+                settingsNav.classList.remove('translate-y-full');
+                mainNav.classList.add('-translate-y-full');
+            } else {
+                settingsNav.classList.add('translate-y-full');
+                mainNav.classList.remove('-translate-y-full');
             }
         }
-        return { error: "Invalid key received from server", key: false };
-    } catch (e) {
-        console.error("[stashRx] License fetch failed:", e);
-        return { error: "Could not reach license server. Check your connection.", key: false };
-    }
-}
 
-// --- Validate a license key (cryptographic, no length-only fallback) ---
-window.validateLicenseKey = async function(key) {
-    if (!key || typeof key !== 'string') return false;
+        // =======================================================================
+        // LICENSE SYSTEM v1 — Keep it simple
+        // =======================================================================
+        
+        window.validateLicenseKey = async function(key) {
+            if (!key || typeof key !== 'string') return false;
+            // V1 rule: deviceId-YYYYMMDD-HEX[16]
+            const parts = key.split('-');
+            if (parts.length !== 3) return false;
 
-    var parts = key.split('-');
-    if (parts.length !== 3) return false;
+            const myDeviceId = getDeviceID();
+            if (parts[0] !== myDeviceId) return false;
+            
+            if (!/^\d{8}$/.test(parts[1])) return false;
+            const yr = parseInt(parts[1].substring(0, 4));
+            const mo = parseInt(parts[1].substring(4, 6));
+            const dy = parseInt(parts[1].substring(6, 8));
+            if (mo < 1 || mo > 12 || dy < 1 || dy > 31 || yr < 2024) return false;
+            
+            const expiryDate = new Date(yr, mo - 1, dy, 23, 59, 59);
+            if (expiryDate < new Date()) return false;
 
-    var keyDeviceId = parts[0];
-    var keyExpiry   = parts[1];
-    var keySig      = parts[2];
+            return /^[0-9a-f]{16}$/i.test(parts[2]);
+        };
 
-    // Device ID must match this device
-    var myDeviceId = getDeviceID();
-    if (keyDeviceId !== myDeviceId) return false;
+        window.checkPremiumStatus = async function() {
+            const key = localStorage.getItem("stashRx_license");
+            if (key) {
+                const valid = await validateLicenseKey(key);
+                if (valid) {
+                    isPremium = true;
+                } else {
+                    isPremium = false;
+                    localStorage.removeItem("stashRx_license");
+                }
+            } else {
+                isPremium = false;
+            }
+            if (typeof updatePremiumUI === 'function') updatePremiumUI();
+        };
 
-    // Expiry must be valid YYYYMMDD and not expired
-    if (!/^\d{8}$/.test(keyExpiry)) return false;
-    var yr = parseInt(keyExpiry.substring(0, 4));
-    var mo = parseInt(keyExpiry.substring(4, 6));
-    var dy = parseInt(keyExpiry.substring(6, 8));
-    if (mo < 1 || mo > 12 || dy < 1 || dy > 31 || yr < 2024) return false;
-    var expiryDate = new Date(yr, mo - 1, dy, 23, 59, 59);
-    if (expiryDate < new Date()) return false;
+        window.showPremiumModal = async function() {
+            const deviceID = getDeviceID();
+            const existingKey = localStorage.getItem("stashRx_license") || "";
 
-    // Signature must be hex
-    if (!/^[0-9A-Fa-f]+$/.test(keySig)) return false;
+            if (existingKey && await validateLicenseKey(existingKey)) {
+                const parts = existingKey.split('-');
+                const exp = parts[1];
+                const expFormatted = exp.substring(0, 4) + '-' + exp.substring(4, 6) + '-' + exp.substring(6, 8);
+                iosAlert(`You already have Premium! License expires: ${expFormatted}`, "Premium Active");
+                return;
+            }
 
-    // Path 2: Server keys — check trusted storage (populated by getAndValidateLicense)
-    // This replaces the old length-only fallback with a proper trust chain.
-    var trustedKey = localStorage.getItem("stashRx_license_trusted");
-    if (trustedKey && trustedKey === key) {
-        return true;
-    }
+            const key = await iosPrompt(
+                `For premium access, please contact orionv888@gmail.com with your Device ID. If you have a license key, enter it below.<br><br>Device ID: <b>${deviceID}</b>`,
+                'Unlock Premium',
+                existingKey
+            );
 
-    // Path 3: If online, try server-side validation as last resort
-    if (keySig.length === 64) {
-        try {
-            var valResponse = await fetch(LICENSE_ENDPOINT + "/validate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ licenseKey: key })
-            });
-            if (valResponse.ok) {
-                var valData = await valResponse.json();
-                if (valData.valid) {
-                    // Cache as trusted for future offline use
-                    localStorage.setItem("stashRx_license_trusted", key);
-                    return true;
+            if (key) {
+                const isValid = await validateLicenseKey(key);
+                if (isValid) {
+                    localStorage.setItem("stashRx_license", key);
+                    isPremium = true;
+                    if (typeof updatePremiumUI === 'function') updatePremiumUI();
+                    iosAlert("License activated successfully!", "Premium Unlocked");
+                } else {
+                    isPremium = false;
+                    localStorage.removeItem("stashRx_license");
+                    iosAlert("The license key is invalid or expired. Please check the key and try again.", "Activation Failed");
                 }
             }
-        } catch(e) {
-            // Offline — can't validate server key without trusted cache
-            console.warn("[stashRx] Offline, cannot validate server key");
-        }
-    }
-
-    return false;
-};
-
-// --- Check premium status on page load ---
-window.checkPremiumStatus = async function() {
-    var key = localStorage.getItem("stashRx_license");
-    if (key) {
-        var valid = await validateLicenseKey(key);
-        if (valid) {
-            isPremium = true;
-        } else {
-            // Key is invalid or expired — revoke premium
-            isPremium = false;
-            localStorage.removeItem("stashRx_license");
-            localStorage.removeItem("stashRx_license_trusted");
-        }
-    } else {
-        isPremium = false;
-    }
-    if (typeof updatePremiumUI === 'function') updatePremiumUI();
-};
-
-// --- Premium modal: server fetch + manual fallback ---
-window.showPremiumModal = async function() {
-    var deviceID = getDeviceID();
-    var existingKey = localStorage.getItem("stashRx_license") || "";
-
-    // If already premium, show status
-    if (existingKey && await validateLicenseKey(existingKey)) {
-        var parts = existingKey.split('-');
-        var exp = parts[1];
-        var expFormatted = exp.substring(0, 4) + '-' + exp.substring(4, 6) + '-' + exp.substring(6, 8);
-        iosAlert("You already have Premium! License expires: " + expFormatted, "Premium Active");
-        return;
-    }
-
-    var instructions = `
-        <div class="text-left text-sm mb-4 text-gray-600">
-            <p class="mb-2">You are using the free version with a <strong>100 item inventory limit</strong>.</p>
-            <p class="bg-gray-100 p-2 rounded font-mono text-center mb-3">Device ID: <b class="text-emerald-600 select-all">${deviceID}</b></p>
-            <p class="mb-2">Tap <b>Activate</b> to fetch your premium license from the server, or <b>Cancel</b> to enter a key manually.</p>
-            <p class="text-xs">For premium access, <a href="mailto:orionv888@gmail.com" class="text-emerald-500 underline font-bold">contact us</a>.</p>
-        </div>
-    `;
-
-    var doFetch = await showIosModal({
-        title: "Unlock Premium",
-        message: instructions,
-        type: a0_0x37c2a9(0x1ff), // 'confirm'
-        confirmText: "Activate"
-    });
-
-    if (doFetch) {
-        // Try server-side license generation (HMAC-authenticated)
-        iosAlert("Contacting license server...", "Please Wait");
-        var result = await getAndValidateLicense(deviceID);
-        if (result.key) {
-            localStorage.setItem("stashRx_license", result.key);
-            isPremium = true;
-            if (typeof updatePremiumUI === 'function') updatePremiumUI();
-            iosAlert("Premium License Activated! All limits removed.", "Success");
-            return;
-        } else {
-            // Show specific error from server
-            var errorMsg = result.error || "Unknown error";
-            if (errorMsg.includes("not approved")) {
-                iosAlert("Your device is not yet approved for premium. Send your Device ID to orionv888@gmail.com to request access.", "Not Approved");
-            } else {
-                iosAlert(errorMsg + "\n\nYou can also enter a key manually.", "Activation Failed");
-            }
-        }
-    }
-
-    // Manual key entry fallback
-    while (true) {
-        var manualKey = await showIosModal({
-            title: "Manual License Entry",
-            message: '<div class="text-left text-sm mb-2 text-gray-600">Enter your license key below:</div>',
-            type: a0_0x37c2a9(0x1a9), // prompt
-            defaultValue: existingKey,
-            confirmText: "Activate"
-        });
-        
-        if (manualKey === null) {
+        };
             break;
         }
         
