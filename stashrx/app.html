@@ -1756,17 +1756,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 var LICENSE_ENDPOINT = "https://generate-license-cpmhktrscq-as.a.run.app";
 
-// HMAC signing key — must match HMAC_SECRET on the server.
-// Replace this value after deploying the new server.
-// --- HMAC-SHA256 helper (Web Crypto API) ---
-, false, ["sign"]
-    );
-    var sigBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
-    var sigArray = Array.from(new Uint8Array(sigBuffer));
-    return sigArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
-}
-
-// --- Fetch license from Cloud Run (HMAC-authenticated) ---
+// --- Fetch license from Cloud Run ---
 async function getAndValidateLicense(deviceId) {
     try {
         var response = await fetch(LICENSE_ENDPOINT, {
