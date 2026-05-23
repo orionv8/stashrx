@@ -8,12 +8,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./stashrx
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Change to app directory
+        run: cd stashrx
 
       - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -22,4 +22,3 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
           projectId: stashrx-63954
           channelId: live
-        working-directory: ./stashrx
