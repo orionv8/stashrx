@@ -1395,26 +1395,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         };
-            break;
-        }
-        
-        if (!manualKey.trim()) {
-            continue;
-        }
-
-        var isValid = await validateLicenseKey(manualKey);
-        if (isValid) {
-            localStorage.setItem("stashRx_license", manualKey);
-            isPremium = true;
-            if (typeof updatePremiumUI === 'function') updatePremiumUI();
-            iosAlert("Premium License Activated! All limits removed.", "Success");
-            break;
-        } else {
-            await iosAlert("Invalid License Key. Check that it matches your Device ID and hasn't expired.", "Error");
-            existingKey = manualKey;
-        }
-    }
-};
 
 // Run premium check on load
 (function() {
