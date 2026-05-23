@@ -290,12 +290,6 @@
                     <div class="p-4 border-t border-gray-100 space-y-3 flex-shrink-0" style="padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 16px);">
                         <input type="file" id="importFile" accept=".xlsx, .xls, .csv" class="hidden">
 
-                        <!-- Close sidebar button -->
-                        <button onclick="toggleMenu(); resetSettingsMenu();" class="w-full py-3 bg-gray-100 text-gray-600 font-semibold rounded-xl active:bg-gray-200 transition text-[14px] min-h-[44px] flex items-center justify-center gap-2">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            Close Menu
-                        </button>
-
                         <!-- Bottom Links -->
                         <div class="w-full flex flex-col items-center space-y-1.5 pt-1">
                             <div class="flex justify-center items-center space-x-2 text-[10px] text-gray-400 font-medium">
@@ -1072,6 +1066,44 @@ function closeAnalyticsModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Transaction Detail Helpers
+// ═══════════════════════════════════════════════════════════════
+async function showSaleDetail(saleId) {
+    const sale = await db.sales.get(saleId);
+    if (!sale) return;
+    const d = new Date(sale.date);
+    const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+    const timeStr = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+    let itemsHtml = '';
+    if (sale.items && sale.items.length) {
+        itemsHtml = sale.items.map(function(i) {
+            const name = i.brand || i.generic || i.name || 'Item';
+            return name + ' x' + (i.qty||1) + ' @ ₱' + (i.price||0).toFixed(2);
+        }).join('<br>');
+    }
+    let msg = '<b>' + dateStr + '</b> at ' + timeStr + '<br><br>';
+    msg += itemsHtml || 'No items';
+    msg += '<br><br><b>Total: ₱' + (sale.total||0).toFixed(2) + '</b>';
+    if (sale.discountDetails && sale.discountDetails.idNumber) {
+        msg += '<br><small>SC/PWD ID: ' + sale.discountDetails.idNumber + '</small>';
+    }
+    iosAlert(msg, 'Sale Details');
+}
+
+async function showExpenseDetail(expId) {
+    const exp = await db.expenses.get(expId);
+    if (!exp) return;
+    const d = new Date(exp.date);
+    const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+    const timeStr = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+    let msg = '<b>' + dateStr + '</b> at ' + timeStr + '<br><br>';
+    msg += 'Category: ' + (exp.category||'Other') + '<br>';
+    msg += 'Description: ' + (exp.description||'None') + '<br><br>';
+    msg += '<b>Amount: ₱' + (exp.amount||0).toFixed(2) + '</b>';
+    iosAlert(msg, 'Expense Details');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Dashboard Override: Date-grouped transaction log + enhanced stats
 // ═══════════════════════════════════════════════════════════════
 window.updateDashboardStats = async function() {
@@ -1181,13 +1213,10 @@ window.updateDashboardStats = async function() {
 
             if (t.type === 'sale') {
                 const itemSummary = t.itemNames.join(', ') + (t.totalItems > 3 ? ' +' + (t.totalItems - 3) + ' more' : '');
-                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2">';
+                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2 active:bg-gray-50 transition cursor-pointer" onclick="showSaleDetail(' + t.id + ')">';
                 html += '  <div class="flex justify-between items-start">';
                 html += '    <div class="flex-grow min-w-0">';
                 html += '      <div class="flex items-center gap-2">';
-                html += '        <div class="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">';
-                html += '          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-                html += '        </div>';
                 html += '        <div class="min-w-0">';
                 html += '          <span class="text-[14px] font-semibold text-gray-900">Sale</span>';
                 html += '          <span class="text-[11px] text-gray-400 ml-1.5">' + timeStr + '</span>';
@@ -1195,27 +1224,24 @@ window.updateDashboardStats = async function() {
                 html += '        </div>';
                 html += '      </div>';
                 if (t.itemCount > 0) {
-                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-9 truncate">' + t.itemCount + ' item' + (t.itemCount !== 1 ? 's' : '') + (itemSummary ? ' — ' + itemSummary : '') + '</p>';
+                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-0 truncate">' + t.itemCount + ' item' + (t.itemCount !== 1 ? 's' : '') + (itemSummary ? ' — ' + itemSummary : '') + '</p>';
                 }
                 html += '    </div>';
                 html += '    <span class="text-[15px] font-bold text-emerald-600 flex-shrink-0 ml-2">₱' + t.amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
                 html += '  </div>';
                 html += '</div>';
             } else {
-                const catIcons = { 'Restock': '📦', 'Utilities': '💡', 'Salary': '👤', 'Supplies': '🧹', 'Other': '📋' };
-                const icon = catIcons[t.category] || '📋';
-                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2">';
+                html += '<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100/80 mt-2 active:bg-gray-50 transition cursor-pointer" onclick="showExpenseDetail(' + t.id + ')">';
                 html += '  <div class="flex justify-between items-start">';
                 html += '    <div class="flex-grow min-w-0">';
                 html += '      <div class="flex items-center gap-2">';
-                html += '        <div class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0 text-[13px]">' + icon + '</div>';
                 html += '        <div class="min-w-0">';
                 html += '          <span class="text-[14px] font-semibold text-gray-900">' + t.category + '</span>';
                 html += '          <span class="text-[11px] text-gray-400 ml-1.5">' + timeStr + '</span>';
                 html += '        </div>';
                 html += '      </div>';
                 if (t.description) {
-                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-9 truncate">' + t.description + '</p>';
+                    html += '      <p class="text-[11px] text-gray-500 mt-1 ml-0 truncate">' + t.description + '</p>';
                 }
                 html += '    </div>';
                 html += '    <span class="text-[15px] font-bold text-red-500 flex-shrink-0 ml-2">-₱' + t.amount.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';

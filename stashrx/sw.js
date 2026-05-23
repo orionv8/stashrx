@@ -1,13 +1,12 @@
-const CACHE_NAME = 'stashRx-v51';
+const CACHE_NAME = 'stashRx-v52';
 const ASSETS = [
-  '/stashrx/',
-  '/stashrx/index.html',
-  '/stashrx/app.html',
-  '/stashrx/chart.umd.min.js',
-  '/stashrx/manifest.json',
-  '/stashrx/icon-192.png',
-  '/stashrx/icon-512.png',
-  '/stashrx/favicon.ico'
+  './',
+  './app.html',
+  './chart.umd.min.js',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './favicon.ico'
 ];
 
 self.addEventListener('install', event => {
