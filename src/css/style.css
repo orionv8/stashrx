@@ -1,0 +1,45 @@
+        @supports (font: -apple-system-body) {
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        }
+        ::-webkit-scrollbar { display: none; }
+        body { -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
+        
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 0.5px solid rgba(0,0,0,0.1);
+        }
+        
+        .ios-toggle:checked {
+            background-color: #10b981; /* Emerald 500 */
+        }
+        .ios-toggle:checked:after {
+            transform: translateX(100%);
+            border-color: white;
+        }
+        
+        /* Drawer Animations */
+        #cartDrawer { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+        .drawer-open { transform: translateY(0%); }
+        .drawer-closed { transform: translateY(100%); }
+        
+        /* Safe area bottom padding for iPhone home indicator */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+        /* Screen transition animations */
+        [id^="screen"]:not(.hidden) {
+            animation: screenFadeIn 0.25s ease-out;
+        }
+        @keyframes screenFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    

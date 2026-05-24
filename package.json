@@ -1,0 +1,27 @@
+{
+  "name": "stashrx",
+  "version": "1.0.0",
+  "description": "",
+  "main": "chart.umd.min.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orionv8/stashrx.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/orionv8/stashrx/issues"
+  },
+  "homepage": "https://github.com/orionv8/stashrx#readme",
+  "devDependencies": {
+    "chart.js": "^4.5.1",
+    "dexie": "^4.4.2",
+    "vite": "^5.3.3",
+    "xlsx": "^0.18.5"
+  }
+}
