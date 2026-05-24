@@ -1164,9 +1164,18 @@ function formatReceipt(sale) {
         html += '</div>';
     }
 
-    // SC/PWD Discount breakdown
-    var discountId = (sale.discountDetails && (sale.discountDetails.idNumber || sale.discountDetails.id)) || '';
-    var discountName = (sale.discountDetails && sale.discountDetails.name) || '';
+    // SC/PWD Discount breakdown — check all possible storage formats
+    var discountId = '';
+    var discountName = '';
+    if (sale.discountDetails && (sale.discountDetails.idNumber || sale.discountDetails.id)) {
+        discountId = sale.discountDetails.idNumber || sale.discountDetails.id;
+        discountName = sale.discountDetails.name || '';
+    } else if (sale.customer && (sale.customer.idNumber || sale.customer.id)) {
+        discountId = sale.customer.idNumber || sale.customer.id;
+        discountName = sale.customer.name || '';
+    } else if (sale.isPwd === true) {
+        discountId = 'SC/PWD';
+    }
     if (discountId) {
         var gross = sale.items ? sale.items.reduce(function(s,i){return s+(i.qty||1)*(i.price||0);},0) : 0;
         var netOfVat = gross / 1.12;
@@ -1477,7 +1486,7 @@ window.updateDashboardStats = async function() {
     sales.forEach(s => {
         const itemCount = s.items ? s.items.reduce((sum, i) => sum + (i.qty || 1), 0) : 0;
         const itemNames = s.items ? s.items.map(i => i.brand || i.generic || i.name || 'Item').slice(0, 3) : [];
-        const hasDiscount = s.discountDetails && (s.discountDetails.idNumber || s.discountDetails.id);
+        const hasDiscount = (s.discountDetails && (s.discountDetails.idNumber || s.discountDetails.id)) || (s.customer && (s.customer.idNumber || s.customer.id)) || s.isPwd === true;
         transactions.push({
             type: 'sale',
             date: new Date(s.date),
