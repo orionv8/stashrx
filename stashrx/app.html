@@ -493,6 +493,54 @@
         </button>
     </div>
 
+    <!-- Payment Method Modal -->
+    <div id="paymentModalOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 opacity-0 hidden transition-opacity duration-200">
+        <div id="paymentModalCard" class="bg-[#F2F2F7]/95 backdrop-blur-xl w-full max-w-[300px] rounded-2xl flex flex-col items-center overflow-hidden transform scale-95 transition-all duration-200 shadow-2xl">
+            <div class="px-4 pt-5 pb-4 w-full">
+                <h3 class="font-semibold text-[17px] leading-snug tracking-tight text-black text-center mb-3">Payment Method</h3>
+
+                <!-- Method Tabs -->
+                <div class="flex bg-gray-200 rounded-lg p-0.5 mb-4">
+                    <button id="payTabCash" onclick="switchPaymentTab('cash')" class="flex-1 py-2 rounded-md text-[13px] font-semibold transition bg-white text-gray-900 shadow-sm">Cash</button>
+                    <button id="payTabOther" onclick="switchPaymentTab('other')" class="flex-1 py-2 rounded-md text-[13px] font-semibold transition text-gray-500">Other</button>
+                </div>
+
+                <!-- Cash View -->
+                <div id="payViewCash" class="space-y-3">
+                    <div class="bg-white rounded-xl p-3 border border-gray-200">
+                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Total Due</label>
+                        <p id="payTotalDue" class="text-[20px] font-bold text-gray-900 mt-0.5">₱0.00</p>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">Amount Received</label>
+                        <input type="number" id="payCashAmount" inputmode="decimal" placeholder="0.00" oninput="computeChange()" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-[16px] font-semibold text-center focus:outline-none focus:border-emerald-500 transition-colors">
+                    </div>
+                    <div id="payChangeDisplay" class="bg-emerald-50 rounded-xl p-3 border border-emerald-100 hidden">
+                        <label class="text-[11px] font-semibold text-emerald-500 uppercase tracking-wider">Change</label>
+                        <p id="payChangeAmount" class="text-[20px] font-bold text-emerald-600 mt-0.5">₱0.00</p>
+                    </div>
+                </div>
+
+                <!-- Other View -->
+                <div id="payViewOther" class="space-y-3 hidden">
+                    <div>
+                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">Provider</label>
+                        <input type="text" id="payProvider" placeholder="e.g. GCash, Maya, BPI" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:border-emerald-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">Reference Number</label>
+                        <input type="text" id="payRefNumber" placeholder="Transaction or reference #" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:border-emerald-500 transition-colors">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex border-t border-gray-300/50 w-full">
+                <button onclick="cancelPaymentModal()" class="w-1/2 py-2.5 border-r border-gray-300/50 text-emerald-600 font-normal text-[17px] active:bg-gray-200/50 transition tracking-tight">Cancel</button>
+                <button onclick="confirmPaymentModal()" class="w-1/2 py-2.5 text-emerald-600 font-semibold text-[17px] active:bg-gray-200/50 transition tracking-tight">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Discount Details Modal -->
     <div id="discountModalOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 opacity-0 hidden transition-opacity duration-200">
         <div id="discountModalCard" class="bg-[#F2F2F7]/95 backdrop-blur-xl w-full max-w-[280px] rounded-2xl flex flex-col items-center overflow-hidden transform scale-95 transition-all duration-200 shadow-2xl">
@@ -1077,42 +1125,310 @@ function closeAnalyticsModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Transaction Detail Helpers
+// Receipt Formatter (shared by checkout + dashboard details)
 // ═══════════════════════════════════════════════════════════════
-async function showSaleDetail(saleId) {
-    const sale = await db.sales.get(saleId);
-    if (!sale) return;
+function formatReceipt(sale) {
     const d = new Date(sale.date);
     const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
     const timeStr = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
-    let itemsHtml = '';
+    const fmt = function(v) { return '₱' + Number(v || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+
+    var html = '<div style="text-align:left;font-size:13px;line-height:1.6">';
+
+    // Header
+    html += '<div style="text-align:center;margin-bottom:8px">';
+    html += '<div style="font-size:11px;color:#888">' + dateStr + ' at ' + timeStr + '</div>';
+    html += '</div>';
+
+    // Items table
     if (sale.items && sale.items.length) {
-        itemsHtml = sale.items.map(function(i) {
-            const name = i.brand || i.generic || i.name || 'Item';
-            return name + ' x' + (i.qty||1) + ' @ ₱' + (i.price||0).toFixed(2);
-        }).join('<br>');
+        html += '<div style="border-top:1px dashed #ddd;border-bottom:1px dashed #ddd;padding:6px 0;margin:4px 0">';
+        var itemsTotal = 0;
+        sale.items.forEach(function(item) {
+            var name = item.name || item.brand || item.generic || 'Item';
+            var qty = item.qty || 1;
+            var price = item.price || 0;
+            var lineTotal = qty * price;
+            itemsTotal += lineTotal;
+            html += '<div style="display:flex;justify-content:space-between;padding:2px 0">';
+            html += '<span>' + name + ' <span style="color:#888">x' + qty + '</span></span>';
+            html += '<span style="font-weight:600">' + fmt(lineTotal) + '</span>';
+            html += '</div>';
+        });
+        html += '</div>';
+
+        // Subtotal
+        html += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#666">';
+        html += '<span>Subtotal (' + sale.items.reduce(function(s,i){return s+(i.qty||1);},0) + ' items)</span>';
+        html += '<span>' + fmt(itemsTotal) + '</span>';
+        html += '</div>';
     }
-    let msg = '<b>' + dateStr + '</b> at ' + timeStr + '<br><br>';
-    msg += itemsHtml || 'No items';
-    msg += '<br><br><b>Total: ₱' + (sale.total||0).toFixed(2) + '</b>';
-    if (sale.discountDetails && sale.discountDetails.idNumber) {
-        msg += '<br><small>SC/PWD ID: ' + sale.discountDetails.idNumber + '</small>';
+
+    // SC/PWD Discount breakdown
+    var discountId = (sale.discountDetails && (sale.discountDetails.idNumber || sale.discountDetails.id)) || '';
+    var discountName = (sale.discountDetails && sale.discountDetails.name) || '';
+    if (discountId) {
+        var gross = sale.items ? sale.items.reduce(function(s,i){return s+(i.qty||1)*(i.price||0);},0) : 0;
+        var netOfVat = gross / 1.12;
+        var vatRemoved = gross - netOfVat;
+        var discount20 = netOfVat * 0.20;
+
+        html += '<div style="border-top:1px dashed #ddd;padding:6px 0;font-size:12px">';
+        html += '<div style="font-weight:600;color:#2563eb;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">SC/PWD Discount Applied</div>';
+        html += '<div style="color:#666;display:flex;justify-content:space-between"><span>Subtotal (gross)</span><span>' + fmt(gross) + '</span></div>';
+        html += '<div style="color:#666;display:flex;justify-content:space-between"><span>Less 12% VAT</span><span style="color:#ef4444">-' + fmt(vatRemoved) + '</span></div>';
+        html += '<div style="color:#666;display:flex;justify-content:space-between"><span>Net of VAT</span><span>' + fmt(netOfVat) + '</span></div>';
+        html += '<div style="color:#666;display:flex;justify-content:space-between"><span>Less 20% Discount</span><span style="color:#ef4444">-' + fmt(discount20) + '</span></div>';
+        html += '</div>';
+        html += '<div style="font-size:11px;color:#888;padding:2px 0">ID: ' + discountId;
+        if (discountName) html += ' &mdash; ' + discountName;
+        html += '</div>';
     }
-    iosAlert(msg, 'Sale Details');
+
+    // Total
+    html += '<div style="border-top:2px solid #10b981;margin-top:6px;padding-top:8px;display:flex;justify-content:space-between;font-size:16px;font-weight:700">';
+    html += '<span>Total</span>';
+    html += '<span style="color:#10b981">' + fmt(sale.total) + '</span>';
+    html += '</div>';
+
+    // Payment info
+    if (sale.paymentInfo) {
+        html += '<div style="border-top:1px dashed #ddd;margin-top:8px;padding-top:6px;font-size:12px;color:#666">';
+        if (sale.paymentInfo.method === 'cash') {
+            html += '<div style="display:flex;justify-content:space-between"><span>Cash Received</span><span style="font-weight:600">' + fmt(sale.paymentInfo.amountReceived) + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between"><span>Change</span><span style="font-weight:600;color:#10b981">' + fmt(sale.paymentInfo.change) + '</span></div>';
+        } else if (sale.paymentInfo.method === 'other') {
+            html += '<div style="display:flex;justify-content:space-between"><span>Paid via</span><span style="font-weight:600">' + (sale.paymentInfo.provider || '') + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between"><span>Ref #</span><span style="font-weight:600">' + (sale.paymentInfo.referenceNumber || '') + '</span></div>';
+        }
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Transaction Detail Helpers (uses receipt format)
+// ═══════════════════════════════════════════════════════════════
+async function showSaleDetail(saleId) {
+    var sale = await db.sales.get(saleId);
+    if (!sale) return;
+    // Enrich item names from inventory if missing
+    if (sale.items && sale.items.length) {
+        var inventory = await db.inventory.toArray();
+        var invMap = {};
+        inventory.forEach(function(inv) { invMap[inv.id] = inv.brand || inv.generic || ''; });
+        sale.items.forEach(function(item) {
+            if (!item.name && !item.brand && !item.generic && item.id && invMap[item.id]) {
+                item.name = invMap[item.id];
+            }
+        });
+    }
+    iosAlert(formatReceipt(sale), 'Sale Details');
 }
 
 async function showExpenseDetail(expId) {
-    const exp = await db.expenses.get(expId);
+    var exp = await db.expenses.get(expId);
     if (!exp) return;
-    const d = new Date(exp.date);
-    const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
-    const timeStr = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
-    let msg = '<b>' + dateStr + '</b> at ' + timeStr + '<br><br>';
-    msg += 'Category: ' + (exp.category||'Other') + '<br>';
-    msg += 'Description: ' + (exp.description||'None') + '<br><br>';
-    msg += '<b>Amount: ₱' + (exp.amount||0).toFixed(2) + '</b>';
-    iosAlert(msg, 'Expense Details');
+    var d = new Date(exp.date);
+    var dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+    var timeStr = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+    var fmt = function(v) { return '₱' + Number(v || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+    var html = '<div style="text-align:left;font-size:13px;line-height:1.6">';
+    html += '<div style="text-align:center;font-size:11px;color:#888;margin-bottom:8px">' + dateStr + ' at ' + timeStr + '</div>';
+    html += '<div style="border-top:1px dashed #ddd;padding:8px 0">';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#888">Category</span><span style="font-weight:600">' + (exp.category||'Other') + '</span></div>';
+    if (exp.description) {
+        html += '<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:#888">Description</span><span>' + exp.description + '</span></div>';
+    }
+    html += '</div>';
+    html += '<div style="border-top:2px solid #ef4444;margin-top:6px;padding-top:8px;display:flex;justify-content:space-between;font-size:16px;font-weight:700">';
+    html += '<span>Amount</span><span style="color:#ef4444">' + fmt(exp.amount) + '</span>';
+    html += '</div></div>';
+    iosAlert(html, 'Expense Details');
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Payment Modal + Checkout Enhancement
+// ═══════════════════════════════════════════════════════════════
+(function() {
+    var _paymentMethod = 'cash'; // 'cash' or 'other'
+    var _paymentResolve = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var btn = document.querySelector('button[onclick="checkout()"]');
+        if (btn) {
+            btn.setAttribute('onclick', 'enhancedCheckout()');
+        }
+    });
+
+    window.switchPaymentTab = function(tab) {
+        _paymentMethod = tab;
+        var cashTab = document.getElementById('payTabCash');
+        var otherTab = document.getElementById('payTabOther');
+        var cashView = document.getElementById('payViewCash');
+        var otherView = document.getElementById('payViewOther');
+        if (tab === 'cash') {
+            cashTab.className = 'flex-1 py-2 rounded-md text-[13px] font-semibold transition bg-white text-gray-900 shadow-sm';
+            otherTab.className = 'flex-1 py-2 rounded-md text-[13px] font-semibold transition text-gray-500';
+            cashView.classList.remove('hidden');
+            otherView.classList.add('hidden');
+        } else {
+            otherTab.className = 'flex-1 py-2 rounded-md text-[13px] font-semibold transition bg-white text-gray-900 shadow-sm';
+            cashTab.className = 'flex-1 py-2 rounded-md text-[13px] font-semibold transition text-gray-500';
+            otherView.classList.remove('hidden');
+            cashView.classList.add('hidden');
+        }
+    };
+
+    window.computeChange = function() {
+        var totalEl = document.getElementById('payTotalDue');
+        var totalText = totalEl ? totalEl.textContent.replace(/[^0-9.]/g, '') : '0';
+        var total = parseFloat(totalText) || 0;
+        var received = parseFloat(document.getElementById('payCashAmount').value) || 0;
+        var changeDisplay = document.getElementById('payChangeDisplay');
+        var changeAmount = document.getElementById('payChangeAmount');
+        if (received > 0) {
+            var change = received - total;
+            changeDisplay.classList.remove('hidden');
+            if (change >= 0) {
+                changeAmount.textContent = '₱' + change.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                changeAmount.className = 'text-[20px] font-bold text-emerald-600 mt-0.5';
+            } else {
+                changeAmount.textContent = 'Short ₱' + Math.abs(change).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                changeAmount.className = 'text-[20px] font-bold text-red-500 mt-0.5';
+            }
+        } else {
+            changeDisplay.classList.add('hidden');
+        }
+    };
+
+    function showPaymentModal(totalDue) {
+        return new Promise(function(resolve) {
+            _paymentResolve = resolve;
+            _paymentMethod = 'cash';
+
+            // Reset fields
+            document.getElementById('payTotalDue').textContent = '₱' + totalDue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            document.getElementById('payCashAmount').value = '';
+            document.getElementById('payChangeDisplay').classList.add('hidden');
+            document.getElementById('payProvider').value = '';
+            document.getElementById('payRefNumber').value = '';
+            switchPaymentTab('cash');
+
+            // Show modal
+            var overlay = document.getElementById('paymentModalOverlay');
+            var card = document.getElementById('paymentModalCard');
+            overlay.classList.remove('hidden');
+            setTimeout(function() {
+                overlay.classList.remove('opacity-0');
+                card.classList.remove('scale-95');
+                card.classList.add('scale-100');
+            }, 10);
+        });
+    }
+
+    function hidePaymentModal() {
+        var overlay = document.getElementById('paymentModalOverlay');
+        var card = document.getElementById('paymentModalCard');
+        overlay.classList.add('opacity-0');
+        card.classList.remove('scale-100');
+        card.classList.add('scale-95');
+        setTimeout(function() { overlay.classList.add('hidden'); }, 200);
+    }
+
+    window.cancelPaymentModal = function() {
+        hidePaymentModal();
+        if (_paymentResolve) { _paymentResolve(null); _paymentResolve = null; }
+    };
+
+    window.confirmPaymentModal = function() {
+        var paymentInfo = null;
+        if (_paymentMethod === 'cash') {
+            var received = parseFloat(document.getElementById('payCashAmount').value) || 0;
+            var totalText = document.getElementById('payTotalDue').textContent.replace(/[^0-9.]/g, '');
+            var total = parseFloat(totalText) || 0;
+            if (received < total) {
+                if (typeof iosAlert === 'function') iosAlert('Amount received is less than total due.', 'Insufficient Amount');
+                return;
+            }
+            paymentInfo = { method: 'cash', amountReceived: received, change: received - total };
+        } else {
+            var provider = document.getElementById('payProvider').value.trim();
+            var refNum = document.getElementById('payRefNumber').value.trim();
+            if (!provider) {
+                if (typeof iosAlert === 'function') iosAlert('Please enter the payment provider.', 'Missing Info');
+                return;
+            }
+            if (!refNum) {
+                if (typeof iosAlert === 'function') iosAlert('Please enter the reference number.', 'Missing Info');
+                return;
+            }
+            paymentInfo = { method: 'other', provider: provider, referenceNumber: refNum };
+        }
+        hidePaymentModal();
+        if (_paymentResolve) { _paymentResolve(paymentInfo); _paymentResolve = null; }
+    };
+
+    window.enhancedCheckout = async function() {
+        // Calculate total for payment modal
+        var isDiscounted = document.getElementById('pwdToggle') ? document.getElementById('pwdToggle').checked : false;
+        var totalEl = document.getElementById('drawerTotal');
+        var totalText = totalEl ? totalEl.textContent.replace(/[^0-9.]/g, '') : '0';
+        var totalDue = parseFloat(totalText) || 0;
+
+        // Show payment method modal
+        var paymentInfo = await showPaymentModal(totalDue);
+        if (!paymentInfo) return; // User cancelled
+
+        // Count sales before checkout
+        var countBefore = await db.sales.count();
+
+        // Suppress original checkout alert
+        var realIosAlert = window.iosAlert;
+        window.iosAlert = function(msg, title) {
+            if (title === 'Checkout Complete' || title === 'Success') return;
+            realIosAlert(msg, title);
+        };
+
+        try {
+            await checkout();
+
+            var countAfter = await db.sales.count();
+            if (countAfter > countBefore) {
+                var sales = await db.sales.orderBy('id').reverse().limit(1).toArray();
+                if (sales.length > 0) {
+                    var lastSale = sales[0];
+
+                    // Save payment info to the sale record
+                    await db.sales.update(lastSale.id, { paymentInfo: paymentInfo });
+                    lastSale.paymentInfo = paymentInfo;
+
+                    // Enrich item names
+                    if (lastSale.items && lastSale.items.length) {
+                        var inv = await db.inventory.toArray();
+                        var invMap = {};
+                        inv.forEach(function(i) { invMap[i.id] = i.brand || i.generic || ''; });
+                        lastSale.items.forEach(function(item) {
+                            if (!item.name && !item.brand && !item.generic && item.id && invMap[item.id]) {
+                                item.name = invMap[item.id];
+                            }
+                        });
+                    }
+
+                    window.iosAlert = realIosAlert;
+                    iosAlert(formatReceipt(lastSale), 'Checkout Complete');
+                    return;
+                }
+            }
+        } catch(e) {
+            console.error('Enhanced checkout error:', e);
+        }
+
+        window.iosAlert = realIosAlert;
+    };
+})();
 
 // ═══════════════════════════════════════════════════════════════
 // Dashboard Override: Date-grouped transaction log + enhanced stats
@@ -1161,7 +1477,7 @@ window.updateDashboardStats = async function() {
     sales.forEach(s => {
         const itemCount = s.items ? s.items.reduce((sum, i) => sum + (i.qty || 1), 0) : 0;
         const itemNames = s.items ? s.items.map(i => i.brand || i.generic || i.name || 'Item').slice(0, 3) : [];
-        const hasDiscount = s.discountDetails && s.discountDetails.idNumber;
+        const hasDiscount = s.discountDetails && (s.discountDetails.idNumber || s.discountDetails.id);
         transactions.push({
             type: 'sale',
             date: new Date(s.date),
@@ -1947,53 +2263,23 @@ window.showPremiumModal = async function() {
         return;
     }
 
-    var instructions = `
-        <div class="text-left text-sm mb-4 text-gray-600">
-            <p class="mb-2">You are using the free version with a <strong>100 item inventory limit</strong>.</p>
-            <p class="bg-gray-100 p-2 rounded font-mono text-center mb-3">Device ID: <b class="text-emerald-600 select-all">${deviceID}</b></p>
-            <p class="mb-2">Tap <b>Activate</b> to fetch your premium license from the server, or <b>Cancel</b> to enter a key manually.</p>
-            <p class="text-xs">For premium access, <a href="mailto:orionv888@gmail.com" class="text-emerald-500 underline font-bold">contact us</a>.</p>
-        </div>
-    `;
-
-    var doFetch = await iosConfirm(instructions, "Unlock Premium");
-
-    if (doFetch) {
-        // Try server-side license generation (HMAC-authenticated)
-        iosAlert("Contacting license server...", "Please Wait");
-        var result = await getAndValidateLicense(deviceID);
-        if (result.key) {
-            localStorage.setItem("stashRx_license", result.key);
-            isPremium = true;
-            if (typeof updatePremiumUI === 'function') updatePremiumUI();
-            iosAlert("Premium License Activated! All limits removed.", "Success");
-            return;
-        } else {
-            // Show specific error from server
-            var errorMsg = result.error || "Unknown error";
-            if (errorMsg.includes("not approved")) {
-                iosAlert("Your device is not yet approved for premium. Send your Device ID to orionv888@gmail.com to request access.", "Not Approved");
-            } else {
-                iosAlert(errorMsg + "\n\nYou can also enter a key manually.", "Activation Failed");
-            }
-        }
-    }
-
-    // Manual key entry fallback
-    var manualKey = await iosPrompt(
-        '<div class="text-left text-sm mb-2 text-gray-600">Enter your license key below:</div>',
-        existingKey,
-        "Manual License Entry"
+    var key = await iosPrompt(
+        'For premium access, please <a href="mailto:orionv888@gmail.com" style="color:#10b981;font-weight:600;text-decoration:underline">contact us</a> with your Device ID. If you have a license key, enter it below.<br><br>Device ID: <b>' + deviceID + '</b>',
+        'Unlock Premium',
+        existingKey
     );
-    if (manualKey) {
-        var isValid = await validateLicenseKey(manualKey);
+
+    if (key) {
+        var isValid = await validateLicenseKey(key);
         if (isValid) {
-            localStorage.setItem("stashRx_license", manualKey);
+            localStorage.setItem("stashRx_license", key);
             isPremium = true;
             if (typeof updatePremiumUI === 'function') updatePremiumUI();
-            iosAlert("Premium License Activated! All limits removed.", "Success");
+            iosAlert("License activated successfully!", "Premium Unlocked");
         } else {
-            iosAlert("Invalid License Key. Check that it matches your Device ID and hasn't expired.", "Error");
+            isPremium = false;
+            localStorage.removeItem("stashRx_license");
+            iosAlert("The license key is invalid or expired. Please check the key and try again.", "Activation Failed");
         }
     }
 };
