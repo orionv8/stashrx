@@ -1201,89 +1201,150 @@ function closeAnalyticsModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Inventory Rendering Override — adds dateAdded to cards
-window.renderInventoryStatus = async function() {
-    var listEl = document.getElementById('inventoryStatusList');
-    if (!listEl) return;
-    listEl.innerHTML = '';
+// Inventory Rendering Override — paginated with dateAdded
+(function() {
+    var INV_PAGE_SIZE = 50;
+    var invCurrentPage = 0;
+    var invAllItems = [];
+    var invIsLoading = false;
 
-    var items = await db.inventory.toArray();
-    var now = new Date();
-    var currentMonth = now.getMonth();
-    var currentYear = now.getFullYear();
+    window.renderInventoryStatus = async function() {
+        var listEl = document.getElementById('inventoryStatusList');
+        if (!listEl) return;
 
-    // Sort by expiry (nearest first)
-    items.sort(function(a, b) {
-        if (!a.exp) return 1;
-        if (!b.exp) return -1;
-        var aParts = a.exp.split('/');
-        var bParts = b.exp.split('/');
-        return new Date(aParts[1], aParts[0] - 1) - new Date(bParts[1], bParts[0] - 1);
-    });
+        invAllItems = await db.inventory.toArray();
+        var now = new Date();
+        var currentMonth = now.getMonth();
+        var currentYear = now.getFullYear();
 
-    items.forEach(function(item) {
-        // Expiry status
-        var expColor = '';
-        var expStatus = '';
-        if (item.exp) {
-            var parts = item.exp.split('/');
-            var expMonth = parseInt(parts[0]) - 1;
-            var expYear = parseInt(parts[1]);
-            var monthsDiff = (expYear - currentYear) * 12 + expMonth - currentMonth;
-            if (monthsDiff < 0) { expColor = 'text-red-500'; expStatus = 'Expired'; }
-            else if (monthsDiff <= 6) { expColor = 'text-orange-500'; expStatus = monthsDiff + ' mos.'; }
-            else if (monthsDiff <= 12) { expColor = 'text-yellow-500'; expStatus = monthsDiff + ' mos.'; }
-            else { expColor = 'text-gray-400'; expStatus = monthsDiff + ' mos.'; }
-        }
+        // Sort by expiry (nearest first)
+        invAllItems.sort(function(a, b) {
+            if (!a.exp) return 1;
+            if (!b.exp) return -1;
+            var aParts = a.exp.split('/');
+            var bParts = b.exp.split('/');
+            return new Date(aParts[1], aParts[0] - 1) - new Date(bParts[1], bParts[0] - 1);
+        });
 
-        // Stock status
-        var stockColor = '';
-        if (item.stock <= 0) stockColor = 'text-red-500';
-        else if (item.stock <= 10) stockColor = 'text-orange-500';
+        // Reset and render first page
+        invCurrentPage = 0;
+        listEl.innerHTML = '';
+        renderInvPage(listEl, currentMonth, currentYear);
 
-        // Date added
-        var dateAddedStr = '';
-        if (item.dateAdded) {
-            var d = new Date(item.dateAdded);
-            dateAddedStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
+        // Show "Load More" or set up scroll-based loading
+        updateInvLoadMore(listEl);
+    };
 
-        var html = '<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" onclick="openEditModal(' + item.id + ')">';
-        html += '<div class="p-3">';
-        html += '<div class="flex justify-between items-start">';
-        html += '<div class="flex-grow pr-4">';
-        html += '<p class="font-semibold text-gray-800">' + (item.brand || item.generic) + '</p>';
-        if (item.brand && item.generic) html += '<p class="text-xs text-gray-500">' + item.generic + '</p>';
-        html += '</div>';
-        html += '<div class="text-right flex-shrink-0">';
-        html += '<p class="font-bold ' + stockColor + '">' + item.stock + '</p>';
-        html += '<p class="text-xs text-gray-400">In Stock</p>';
-        html += '</div>';
-        html += '</div>';
-        html += '</div>';
+    function renderInvPage(listEl, currentMonth, currentYear) {
+        var start = invCurrentPage * INV_PAGE_SIZE;
+        var end = Math.min(start + INV_PAGE_SIZE, invAllItems.length);
+        var fragment = '';
 
-        // Bottom bar with expiry and date added
-        var hasBottom = item.exp || dateAddedStr;
-        if (hasBottom) {
-            html += '<div class="border-t border-gray-100 px-3 py-2 text-xs flex justify-between items-center bg-gray-50/50">';
+        for (var idx = start; idx < end; idx++) {
+            var item = invAllItems[idx];
+
+            // Expiry status
+            var expColor = '';
+            var expStatus = '';
             if (item.exp) {
-                html += '<span class="font-medium text-gray-500">Exp: ' + item.exp + '</span>';
-                html += '<span class="font-bold ' + expColor + '">' + expStatus + '</span>';
+                var parts = item.exp.split('/');
+                var expMonth = parseInt(parts[0]) - 1;
+                var expYear = parseInt(parts[1]);
+                var monthsDiff = (expYear - currentYear) * 12 + expMonth - currentMonth;
+                if (monthsDiff < 0) { expColor = 'text-red-500'; expStatus = 'Expired'; }
+                else if (monthsDiff <= 6) { expColor = 'text-orange-500'; expStatus = monthsDiff + ' mos.'; }
+                else if (monthsDiff <= 12) { expColor = 'text-yellow-500'; expStatus = monthsDiff + ' mos.'; }
+                else { expColor = 'text-gray-400'; expStatus = monthsDiff + ' mos.'; }
             }
-            if (dateAddedStr) {
-                html += '<span class="text-gray-400 text-[10px]">Added: ' + dateAddedStr + '</span>';
+
+            // Stock status
+            var stockColor = '';
+            if (item.stock <= 0) stockColor = 'text-red-500';
+            else if (item.stock <= 10) stockColor = 'text-orange-500';
+
+            // Date added — handle any format
+            var dateAddedStr = '';
+            if (item.dateAdded) {
+                var d = new Date(item.dateAdded);
+                if (!isNaN(d.getTime())) {
+                    dateAddedStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                } else {
+                    dateAddedStr = String(item.dateAdded);
+                }
             }
-            html += '</div>';
+
+            fragment += '<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" onclick="openEditModal(' + item.id + ')">';
+            fragment += '<div class="p-3">';
+            fragment += '<div class="flex justify-between items-start">';
+            fragment += '<div class="flex-grow pr-4">';
+            fragment += '<p class="font-semibold text-gray-800">' + (item.brand || item.generic) + '</p>';
+            if (item.brand && item.generic) fragment += '<p class="text-xs text-gray-500">' + item.generic + '</p>';
+            fragment += '</div>';
+            fragment += '<div class="text-right flex-shrink-0">';
+            fragment += '<p class="font-bold ' + stockColor + '">' + item.stock + '</p>';
+            fragment += '<p class="text-xs text-gray-400">In Stock</p>';
+            fragment += '</div>';
+            fragment += '</div>';
+            fragment += '</div>';
+
+            // Bottom bar
+            var hasBottom = item.exp || dateAddedStr;
+            if (hasBottom) {
+                fragment += '<div class="border-t border-gray-100 px-3 py-2 text-xs flex justify-between items-center bg-gray-50/50">';
+                if (item.exp) {
+                    fragment += '<span class="font-medium text-gray-500">Exp: ' + item.exp + '</span>';
+                    fragment += '<span class="font-bold ' + expColor + '">' + expStatus + '</span>';
+                }
+                if (dateAddedStr) {
+                    fragment += '<span class="text-gray-600 font-medium text-[10px]">Added: ' + dateAddedStr + '</span>';
+                }
+                fragment += '</div>';
+            }
+            fragment += '</div>';
         }
 
-        html += '</div>';
-        listEl.innerHTML += html;
-    });
-
-    if (items.length === 0) {
-        listEl.innerHTML = '<div class="p-4 text-center text-sm text-gray-500">No items found</div>';
+        listEl.insertAdjacentHTML('beforeend', fragment);
+        invCurrentPage++;
     }
-};
+
+    function updateInvLoadMore(listEl) {
+        // Remove existing load more button
+        var existing = document.getElementById('invLoadMoreBtn');
+        if (existing) existing.remove();
+
+        var totalLoaded = invCurrentPage * INV_PAGE_SIZE;
+        if (totalLoaded < invAllItems.length) {
+            var remaining = invAllItems.length - totalLoaded;
+            var btn = document.createElement('div');
+            btn.id = 'invLoadMoreBtn';
+            btn.className = 'text-center py-4';
+            btn.innerHTML = '<button onclick="loadMoreInventory()" class="bg-emerald-50 text-emerald-600 font-semibold text-[13px] px-6 py-2.5 rounded-xl active:bg-emerald-100 transition border border-emerald-100">Load More (' + remaining + ' remaining)</button>';
+            listEl.appendChild(btn);
+        }
+
+        // Show count
+        var countEl = document.getElementById('invCountLabel');
+        if (!countEl) {
+            countEl = document.createElement('div');
+            countEl.id = 'invCountLabel';
+            countEl.className = 'text-center text-[11px] text-gray-400 py-2';
+            listEl.parentNode.insertBefore(countEl, listEl);
+        }
+        countEl.textContent = 'Showing ' + Math.min(totalLoaded, invAllItems.length) + ' of ' + invAllItems.length + ' items';
+    }
+
+    window.loadMoreInventory = function() {
+        var listEl = document.getElementById('inventoryStatusList');
+        var now = new Date();
+        renderInvPage(listEl, now.getMonth(), now.getFullYear());
+        updateInvLoadMore(listEl);
+    };
+
+    if (invAllItems.length === 0) {
+        var listEl = document.getElementById('inventoryStatusList');
+        if (listEl) listEl.innerHTML = '<div class="p-4 text-center text-sm text-gray-500">No items found</div>';
+    }
+})();
 
 // Receipt Formatter (shared by checkout + dashboard details)
 // ═══════════════════════════════════════════════════════════════
@@ -1949,7 +2010,18 @@ window.handleImport = async function(event) {
                         exp: i.exp instanceof Date ?
                              (String(i.exp.getMonth()+1).padStart(2,'0') + '/' + i.exp.getFullYear()) :
                              String(i.exp || ''),
-                        dateAdded: i.dateAdded || (existing ? existing.dateAdded : null) || new Date().toISOString()
+                        dateAdded: (function() {
+                            // Preserve existing dateAdded for known items
+                            if (existing && existing.dateAdded) return existing.dateAdded;
+                            // Parse whatever format the user entered
+                            if (i.dateAdded) {
+                                var d = new Date(i.dateAdded);
+                                if (!isNaN(d.getTime())) return d.toISOString();
+                                // Try as string — might be "May 25, 2026" or "2026-05-25" etc
+                                return String(i.dateAdded);
+                            }
+                            return new Date().toISOString();
+                        })()
                     };
                 }).filter(i => !isNaN(i.id));
                 
