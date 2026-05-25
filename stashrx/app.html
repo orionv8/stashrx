@@ -2340,9 +2340,37 @@ window.showPremiumModal = async function() {
         return;
     }
 
+    // Try auto-fetch from server first
+    if (navigator.onLine && typeof getAndValidateLicense === 'function') {
+        var doFetch = await iosConfirm(
+            'For premium access, please <a href="mailto:orionv888@gmail.com" style="color:#10b981;font-weight:600;text-decoration:underline">contact us</a> with your Device ID.<br><br>Device ID: <b>' + deviceID + '</b><br><br>If your device is already approved, tap <b>Activate</b> to fetch your license automatically.<br><br><a onclick="restoreDeviceId()" style="color:#3b82f6;font-size:12px;text-decoration:underline;cursor:pointer">Lost your Device ID? Tap here to restore it.</a>',
+            'Unlock Premium'
+        );
+
+        if (doFetch) {
+            iosAlert("Contacting license server...", "Please Wait");
+            var result = await getAndValidateLicense(deviceID);
+            if (result.key) {
+                localStorage.setItem("stashRx_license", result.key);
+                isPremium = true;
+                if (typeof updatePremiumUI === 'function') updatePremiumUI();
+                iosAlert("Premium License Activated! All limits removed.", "Premium Unlocked");
+                return;
+            } else {
+                var errorMsg = result.error || "Unknown error";
+                if (errorMsg.indexOf("not approved") >= 0) {
+                    iosAlert("Your device is not yet approved for premium. Send your Device ID (<b>" + deviceID + "</b>) to <a href='mailto:orionv888@gmail.com' style='color:#10b981'>orionv888@gmail.com</a> to request access.", "Not Approved");
+                } else {
+                    iosAlert(errorMsg + "<br><br>You can also enter a license key manually below.", "Activation Failed");
+                }
+            }
+        }
+    }
+
+    // Manual key entry fallback
     var key = await iosPrompt(
-        'For premium access, please <a href="mailto:orionv888@gmail.com" style="color:#10b981;font-weight:600;text-decoration:underline">contact us</a> with your Device ID. If you have a license key, enter it below.<br><br>Device ID: <b>' + deviceID + '</b><br><a onclick="restoreDeviceId()" style="color:#3b82f6;font-size:12px;text-decoration:underline;cursor:pointer">Lost your Device ID? Tap here to restore it.</a>',
-        'Unlock Premium',
+        'Enter your license key below:<br><br>Device ID: <b>' + deviceID + '</b>',
+        'Manual License Entry',
         existingKey
     );
 
