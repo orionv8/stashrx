@@ -129,8 +129,12 @@
            ═══════════════════════════════════════════════ */
         @media (min-width: 768px) and (orientation: landscape) {
             header.glass-header {
+                max-width: 680px !important;
                 padding-top: 4px !important;
                 padding-bottom: 8px;
+            }
+            #screenLedger, #screenExpenses, #screenDashboard, #screenInventory {
+                max-width: 680px !important;
             }
             #screenLedger main,
             #screenInventory > div:first-child + main {
@@ -144,22 +148,25 @@
                 padding-top: 70px !important;
             }
             #cartDrawer {
-                max-width: 520px;
+                max-width: 680px;
                 left: 0; right: 0;
                 margin: 0 auto;
             }
             #miniCart {
-                max-width: 488px;
+                max-width: 648px;
+            }
+            #sideMenuPanel {
+                width: 320px !important;
             }
             #analyticsModalCard {
-                max-width: 600px;
+                max-width: 640px;
                 margin: 0 auto;
             }
             #paymentModalCard, #discountModalCard, #iosModalCard {
-                max-width: 340px;
+                max-width: 360px;
             }
             #addModalCard, #editModalCard {
-                max-width: 440px;
+                max-width: 480px;
             }
         }
 
@@ -2303,7 +2310,7 @@ window.showPremiumModal = async function() {
     }
 
     var key = await iosPrompt(
-        'For premium access, please <a href="mailto:orionv888@gmail.com" style="color:#10b981;font-weight:600;text-decoration:underline">contact us</a> with your Device ID. If you have a license key, enter it below.<br><br>Device ID: <b>' + deviceID + '</b>',
+        'For premium access, please <a href="mailto:orionv888@gmail.com" style="color:#10b981;font-weight:600;text-decoration:underline">contact us</a> with your Device ID. If you have a license key, enter it below.<br><br>Device ID: <b>' + deviceID + '</b><br><a onclick="restoreDeviceId()" style="color:#3b82f6;font-size:12px;text-decoration:underline;cursor:pointer">Lost your Device ID? Tap here to restore it.</a>',
         'Unlock Premium',
         existingKey
     );
@@ -2322,6 +2329,40 @@ window.showPremiumModal = async function() {
         }
     }
 };
+
+// Device ID recovery — manual entry
+window.restoreDeviceId = async function() {
+    // Close the current modal first
+    var overlay = document.getElementById('iosModalOverlay');
+    if (overlay) { overlay.classList.add('hidden'); overlay.classList.add('opacity-0'); }
+
+    var oldId = await iosPrompt('Enter your previous Device ID to restore it. You can find it in your license key (the first part before the dash) or from your previous correspondence.', 'Restore Device ID', '');
+    if (oldId && oldId.trim().length >= 4) {
+        oldId = oldId.trim().toUpperCase();
+        localStorage.setItem('stashRx_deviceID', oldId);
+        // Also backup to Dexie
+        try {
+            var sys = new Dexie('stashRxSys');
+            sys.version(1).stores({ settings: 'id' });
+            await sys.settings.put({id: 'stashRx_deviceID', value: oldId});
+        } catch(e) {}
+        iosAlert('Device ID restored to: <b>' + oldId + '</b>. You can now enter your license key or sync from cloud.', 'Device ID Restored');
+    }
+};
+
+// URL parameter device ID restore: ?setDeviceId=XXXXXXXX
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var setId = params.get('setDeviceId');
+    if (setId && setId.trim().length >= 4) {
+        localStorage.setItem('stashRx_deviceID', setId.trim().toUpperCase());
+        try {
+            var sys = new Dexie('stashRxSys');
+            sys.version(1).stores({ settings: 'id' });
+            sys.settings.put({id: 'stashRx_deviceID', value: setId.trim().toUpperCase()});
+        } catch(e) {}
+    }
+})();
 
 // Run premium check on load
 (function() {
