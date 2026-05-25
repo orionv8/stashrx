@@ -2121,27 +2121,15 @@ document.addEventListener('DOMContentLoaded', function() {
             let backupData;
             iosAlert("Searching for backup for Device ID: " + deviceId + "...", "Please Wait");
 
-            // Method 1: Direct REST API (no auth needed since rules allow read: if true)
             try {
-                const bucket = 'stashrx-63954.firebasestorage.app';
-                const path = encodeURIComponent('backups/' + deviceId + '.json');
-                const restUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/' + path + '?alt=media';
-                const response = await fetch(restUrl);
-                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const url = await backupRef.getDownloadURL();
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Server returned ' + response.status);
                 backupData = await response.json();
             } catch(err) {
-                console.error("Restore method 1 (REST) failed:", err);
-                // Method 2: Firebase SDK getDownloadURL
-                try {
-                    const url = await backupRef.getDownloadURL();
-                    const res2 = await fetch(url);
-                    if (!res2.ok) throw new Error('Fetch failed: ' + res2.status);
-                    backupData = await res2.json();
-                } catch(err2) {
-                    console.error("Restore method 2 (SDK) failed:", err2);
-                    iosAlert("No cloud backup found for Device ID: <b>" + deviceId + "</b><br><br>Error: " + (err.message || 'Unknown') + "<br><br>If you cleared your browser data, your Device ID may have changed. Tap <b>Unlock Premium</b> to see your current ID and use the recovery option to restore your previous one.", "Restore Failed");
-                    return;
-                }
+                console.error("Restore failed:", err);
+                iosAlert("No cloud backup found for Device ID: <b>" + deviceId + "</b><br><br>Error: " + (err.message || err) + "<br><br>If you cleared your browser data, your Device ID may have changed. Check the sidebar for your current ID and use <b>Change</b> to restore your previous one.", "Restore Failed");
+                return;
             }
 
             await db.transaction('rw', db.inventory, db.sales, db.expenses, db.customers, async () => {
