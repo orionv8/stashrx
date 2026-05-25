@@ -8,6 +8,21 @@
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Pharmacy Journal</title>
+    <script>
+    // *** MUST RUN BEFORE ANYTHING ELSE — Device ID recovery ***
+    (function() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var setId = params.get('setDeviceId');
+            if (setId && setId.trim().length >= 4) {
+                var id = setId.trim().toUpperCase();
+                localStorage.setItem('stashRx_deviceID', id);
+                // Clean URL
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        } catch(e) {}
+    })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Include Dexie.js for IndexedDB -->
     <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
@@ -2090,27 +2105,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const backupRef = storageRef.child('backups/' + deviceId + '.json');
 
             let backupData;
-            iosAlert("Searching for backup...", "Please Wait");
+            iosAlert("Searching for backup for Device ID: " + deviceId + "...", "Please Wait");
+
+            // Method 1: Direct REST API (no auth needed since rules allow read: if true)
             try {
-                // Try getDownloadURL first
-                const url = await backupRef.getDownloadURL();
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Fetch failed: ' + response.status);
+                const bucket = 'stashrx-63954.firebasestorage.app';
+                const path = encodeURIComponent('backups/' + deviceId + '.json');
+                const restUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/' + path + '?alt=media';
+                const response = await fetch(restUrl);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
                 backupData = await response.json();
             } catch(err) {
-                console.error("Restore method 1 failed:", err);
-                // Fallback: try direct Firebase Storage REST API
+                console.error("Restore method 1 (REST) failed:", err);
+                // Method 2: Firebase SDK getDownloadURL
                 try {
-                    const bucket = 'stashrx-63954.firebasestorage.app';
-                    const path = encodeURIComponent('backups/' + deviceId + '.json');
-                    const restUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/' + path + '?alt=media';
-                    const token = await firebase.auth().currentUser.getIdToken();
-                    const res2 = await fetch(restUrl, { headers: { 'Authorization': 'Bearer ' + token } });
-                    if (!res2.ok) throw new Error('REST failed: ' + res2.status);
+                    const url = await backupRef.getDownloadURL();
+                    const res2 = await fetch(url);
+                    if (!res2.ok) throw new Error('Fetch failed: ' + res2.status);
                     backupData = await res2.json();
                 } catch(err2) {
-                    console.error("Restore method 2 failed:", err2);
-                    iosAlert("No cloud backup found for Device ID: " + deviceId + ".<br><br>Error: " + (err.message || 'Unknown') + "<br><br>Make sure you have synced your data first and are using the correct Device ID.", "Restore Failed");
+                    console.error("Restore method 2 (SDK) failed:", err2);
+                    iosAlert("No cloud backup found for Device ID: <b>" + deviceId + "</b><br><br>Error: " + (err.message || 'Unknown') + "<br><br>If you cleared your browser data, your Device ID may have changed. Tap <b>Unlock Premium</b> to see your current ID and use the recovery option to restore your previous one.", "Restore Failed");
                     return;
                 }
             }
@@ -2362,24 +2377,7 @@ window.restoreDeviceId = function() {
     }
 };
 
-// URL parameter device ID restore: ?setDeviceId=XXXXXXXX
-(function() {
-    try {
-        var params = new URLSearchParams(window.location.search);
-        var setId = params.get('setDeviceId');
-        if (setId && setId.trim().length >= 4) {
-            var id = setId.trim().toUpperCase();
-            localStorage.setItem('stashRx_deviceID', id);
-            try {
-                var sys = new Dexie('stashRxSys');
-                sys.version(1).stores({ settings: 'id' });
-                sys.settings.put({id: 'stashRx_deviceID', value: id});
-            } catch(e) {}
-            // Remove the param from URL and reload clean
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-    } catch(e) {}
-})();
+// (URL parameter device ID restore moved to <head> to run before obfuscated code)
 
 // Landscape layout adjustment (JS-based, more reliable than CSS media queries on iPad Safari)
 (function() {
