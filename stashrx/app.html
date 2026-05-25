@@ -125,6 +125,45 @@
         }
 
         /* ═══════════════════════════════════════════════
+           Landscape tablet optimization
+           ═══════════════════════════════════════════════ */
+        @media (min-width: 768px) and (orientation: landscape) {
+            header.glass-header {
+                padding-top: 4px !important;
+                padding-bottom: 8px;
+            }
+            #screenLedger main,
+            #screenInventory > div:first-child + main {
+                padding-top: 100px !important;
+            }
+            #screenInventory > div:first-child {
+                padding-top: 100px !important;
+            }
+            #screenExpenses > div:first-child,
+            #screenDashboard > div:first-child {
+                padding-top: 70px !important;
+            }
+            #cartDrawer {
+                max-width: 520px;
+                left: 0; right: 0;
+                margin: 0 auto;
+            }
+            #miniCart {
+                max-width: 488px;
+            }
+            #analyticsModalCard {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+            #paymentModalCard, #discountModalCard, #iosModalCard {
+                max-width: 340px;
+            }
+            #addModalCard, #editModalCard {
+                max-width: 440px;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════
            Sidebar safe area & touch target fixes
            ═══════════════════════════════════════════════ */
         #sideMenuPanel {
@@ -1783,13 +1822,6 @@ window.handleImport = async function(event) {
                     };
                 }).filter(i => !isNaN(i.id));
                 
-                // Enforce 100-item limit for free users
-                const premiumStatus = (typeof isPremium !== 'undefined') ? isPremium : false;
-                if (!premiumStatus && validInv.length > 100) {
-                    validInv = validInv.slice(0, 100);
-                    if (typeof iosAlert !== 'undefined') iosAlert('Free version is limited to 100 inventory items. Only the first 100 items were imported. Upgrade to Premium for unlimited items.', 'Limit Reached');
-                }
-
                 if (validInv.length) {
                     await db.inventory.clear();
                     await db.inventory.bulkAdd(validInv);
@@ -1867,14 +1899,10 @@ window.handleImport = async function(event) {
 </script>
 
 <script>
-// === IMPORT DEFENSE LAYER ===
-// Multi-layer protection to ensure the obfuscated import handler cannot bypass the 100-item limit.
-// Layer 1: onchange attribute already removed from HTML above.
-// Layer 2: 100-item limit check added inside window.handleImport above.
-// Layer 3: Replace file input element to strip any residual event listeners.
-// Layer 4: Neuter processImportedData so the obfuscated chain is a dead end.
+// === IMPORT HANDLER SETUP ===
+// Replace file input element to strip any residual event listeners.
 document.addEventListener('DOMContentLoaded', function() {
-    // Layer 3: Replace file input element entirely
+    // Replace file input element entirely to ensure our handler is used
     var oldInput = document.getElementById('importFile');
     if (oldInput) {
         var newInput = document.createElement('input');
@@ -1888,16 +1916,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         oldInput.parentNode.replaceChild(newInput, oldInput);
-    }
-
-    // Layer 4: Neuter obfuscated processImportedData
-    // The obfuscated handleImport calls this to write data — make it a no-op.
-    // Our window.handleImport writes directly via db.inventory.bulkAdd, so this override
-    // only blocks the obfuscated path without affecting our handler.
-    if (typeof processImportedData === 'function') {
-        window.processImportedData = async function() { return; };
-        // Also override via direct name for global scope (function declarations use global object binding)
-        try { processImportedData = async function() { return; }; } catch(e) {}
     }
 });
 </script>
@@ -1928,13 +1946,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 s1.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-app-compat.js";
                 s1.onload = () => {
                     const s2 = document.createElement('script');
-                    s2.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-storage-compat.js";
-                    s2.onload = resolve;
+                    s2.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth-compat.js";
+                    s2.onload = () => {
+                        const s3 = document.createElement('script');
+                        s3.src = "https://www.gstatic.com/firebasejs/10.1.0/firebase-storage-compat.js";
+                        s3.onload = resolve;
+                        document.head.appendChild(s3);
+                    };
                     document.head.appendChild(s2);
                 };
                 document.head.appendChild(s1);
             });
             firebase.initializeApp(config);
+            try { await firebase.auth().signInAnonymously(); } catch(e) { console.log('Anonymous auth failed:', e); }
         }
         
         // const fdb = firebase.firestore(); // Removed for Storage API
@@ -1997,6 +2021,9 @@ document.addEventListener('DOMContentLoaded', function() {
             iosAlert("Cloud services are still loading. Please wait a moment and try again.", "Please Wait");
             return;
         }
+        if (!firebase.auth().currentUser) {
+            try { await firebase.auth().signInAnonymously(); } catch(e) {}
+        }
 
         // Show syncing feedback
         iosAlert("Syncing your data to the cloud...", "Syncing");
@@ -2040,6 +2067,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
             iosAlert("Cloud services are still loading. Please wait a moment and try again.", "Please Wait");
             return;
+        }
+        if (!firebase.auth().currentUser) {
+            try { await firebase.auth().signInAnonymously(); } catch(e) {}
         }
 
         const confirmed = await iosConfirm("This will ERASE all current data on this device and replace it with your last cloud backup. Are you sure you want to proceed?", "Confirm Restore");
