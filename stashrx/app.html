@@ -2090,13 +2090,29 @@ document.addEventListener('DOMContentLoaded', function() {
             const backupRef = storageRef.child('backups/' + deviceId + '.json');
 
             let backupData;
+            iosAlert("Searching for backup...", "Please Wait");
             try {
+                // Try getDownloadURL first
                 const url = await backupRef.getDownloadURL();
                 const response = await fetch(url);
+                if (!response.ok) throw new Error('Fetch failed: ' + response.status);
                 backupData = await response.json();
             } catch(err) {
-                iosAlert("No cloud backup found for Device ID: " + deviceId + ". Sync your data first, or make sure you are on the same device.", "Not Found");
-                return;
+                console.error("Restore method 1 failed:", err);
+                // Fallback: try direct Firebase Storage REST API
+                try {
+                    const bucket = 'stashrx-63954.firebasestorage.app';
+                    const path = encodeURIComponent('backups/' + deviceId + '.json');
+                    const restUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/' + path + '?alt=media';
+                    const token = await firebase.auth().currentUser.getIdToken();
+                    const res2 = await fetch(restUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+                    if (!res2.ok) throw new Error('REST failed: ' + res2.status);
+                    backupData = await res2.json();
+                } catch(err2) {
+                    console.error("Restore method 2 failed:", err2);
+                    iosAlert("No cloud backup found for Device ID: " + deviceId + ".<br><br>Error: " + (err.message || 'Unknown') + "<br><br>Make sure you have synced your data first and are using the correct Device ID.", "Restore Failed");
+                    return;
+                }
             }
 
             await db.transaction('rw', db.inventory, db.sales, db.expenses, db.customers, async () => {
@@ -2330,38 +2346,67 @@ window.showPremiumModal = async function() {
     }
 };
 
-// Device ID recovery — manual entry
-window.restoreDeviceId = async function() {
-    // Close the current modal first
-    var overlay = document.getElementById('iosModalOverlay');
-    if (overlay) { overlay.classList.add('hidden'); overlay.classList.add('opacity-0'); }
-
-    var oldId = await iosPrompt('Enter your previous Device ID to restore it. You can find it in your license key (the first part before the dash) or from your previous correspondence.', 'Restore Device ID', '');
+// Device ID recovery — using native prompt (more reliable than iosPrompt inside iosPrompt)
+window.restoreDeviceId = function() {
+    var oldId = prompt('Enter your previous Device ID:');
     if (oldId && oldId.trim().length >= 4) {
         oldId = oldId.trim().toUpperCase();
         localStorage.setItem('stashRx_deviceID', oldId);
-        // Also backup to Dexie
         try {
             var sys = new Dexie('stashRxSys');
             sys.version(1).stores({ settings: 'id' });
-            await sys.settings.put({id: 'stashRx_deviceID', value: oldId});
+            sys.settings.put({id: 'stashRx_deviceID', value: oldId});
         } catch(e) {}
-        iosAlert('Device ID restored to: <b>' + oldId + '</b>. You can now enter your license key or sync from cloud.', 'Device ID Restored');
+        alert('Device ID restored to: ' + oldId + '\n\nThe page will reload now.');
+        window.location.reload();
     }
 };
 
 // URL parameter device ID restore: ?setDeviceId=XXXXXXXX
 (function() {
-    var params = new URLSearchParams(window.location.search);
-    var setId = params.get('setDeviceId');
-    if (setId && setId.trim().length >= 4) {
-        localStorage.setItem('stashRx_deviceID', setId.trim().toUpperCase());
-        try {
-            var sys = new Dexie('stashRxSys');
-            sys.version(1).stores({ settings: 'id' });
-            sys.settings.put({id: 'stashRx_deviceID', value: setId.trim().toUpperCase()});
-        } catch(e) {}
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var setId = params.get('setDeviceId');
+        if (setId && setId.trim().length >= 4) {
+            var id = setId.trim().toUpperCase();
+            localStorage.setItem('stashRx_deviceID', id);
+            try {
+                var sys = new Dexie('stashRxSys');
+                sys.version(1).stores({ settings: 'id' });
+                sys.settings.put({id: 'stashRx_deviceID', value: id});
+            } catch(e) {}
+            // Remove the param from URL and reload clean
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    } catch(e) {}
+})();
+
+// Landscape layout adjustment (JS-based, more reliable than CSS media queries on iPad Safari)
+(function() {
+    function adjustLandscape() {
+        var isTablet = window.innerWidth >= 768;
+        var isLandscape = window.innerWidth > window.innerHeight;
+        var maxW = isTablet && isLandscape ? '680px' : isTablet ? '520px' : '';
+
+        ['screenLedger','screenExpenses','screenDashboard','screenInventory'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.maxWidth = maxW;
+        });
+
+        var header = document.querySelector('header.glass-header');
+        if (header) header.style.maxWidth = maxW;
+
+        var cart = document.getElementById('cartDrawer');
+        if (cart) cart.style.maxWidth = maxW;
+
+        var mini = document.getElementById('miniCart');
+        if (mini) mini.style.maxWidth = isTablet && isLandscape ? '648px' : isTablet ? '488px' : '';
     }
+
+    window.addEventListener('resize', adjustLandscape);
+    window.addEventListener('orientationchange', function() { setTimeout(adjustLandscape, 300); });
+    document.addEventListener('DOMContentLoaded', adjustLandscape);
+    adjustLandscape();
 })();
 
 // Run premium check on load
