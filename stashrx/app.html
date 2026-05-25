@@ -793,9 +793,10 @@
                 brand,
                 stock,
                 price,
-                exp
+                exp,
+                dateAdded: new Date().toISOString()
             };
-            
+
             await db.inventory.add(newItem);
             closeAddModal();
             // Assuming loadInventory exists and we can call it to refresh
@@ -1200,6 +1201,90 @@ function closeAnalyticsModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Inventory Rendering Override — adds dateAdded to cards
+window.renderInventoryStatus = async function() {
+    var listEl = document.getElementById('inventoryStatusList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    var items = await db.inventory.toArray();
+    var now = new Date();
+    var currentMonth = now.getMonth();
+    var currentYear = now.getFullYear();
+
+    // Sort by expiry (nearest first)
+    items.sort(function(a, b) {
+        if (!a.exp) return 1;
+        if (!b.exp) return -1;
+        var aParts = a.exp.split('/');
+        var bParts = b.exp.split('/');
+        return new Date(aParts[1], aParts[0] - 1) - new Date(bParts[1], bParts[0] - 1);
+    });
+
+    items.forEach(function(item) {
+        // Expiry status
+        var expColor = '';
+        var expStatus = '';
+        if (item.exp) {
+            var parts = item.exp.split('/');
+            var expMonth = parseInt(parts[0]) - 1;
+            var expYear = parseInt(parts[1]);
+            var monthsDiff = (expYear - currentYear) * 12 + expMonth - currentMonth;
+            if (monthsDiff < 0) { expColor = 'text-red-500'; expStatus = 'Expired'; }
+            else if (monthsDiff <= 6) { expColor = 'text-orange-500'; expStatus = monthsDiff + ' mos.'; }
+            else if (monthsDiff <= 12) { expColor = 'text-yellow-500'; expStatus = monthsDiff + ' mos.'; }
+            else { expColor = 'text-gray-400'; expStatus = monthsDiff + ' mos.'; }
+        }
+
+        // Stock status
+        var stockColor = '';
+        if (item.stock <= 0) stockColor = 'text-red-500';
+        else if (item.stock <= 10) stockColor = 'text-orange-500';
+
+        // Date added
+        var dateAddedStr = '';
+        if (item.dateAdded) {
+            var d = new Date(item.dateAdded);
+            dateAddedStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        var html = '<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" onclick="openEditModal(' + item.id + ')">';
+        html += '<div class="p-3">';
+        html += '<div class="flex justify-between items-start">';
+        html += '<div class="flex-grow pr-4">';
+        html += '<p class="font-semibold text-gray-800">' + (item.brand || item.generic) + '</p>';
+        if (item.brand && item.generic) html += '<p class="text-xs text-gray-500">' + item.generic + '</p>';
+        html += '</div>';
+        html += '<div class="text-right flex-shrink-0">';
+        html += '<p class="font-bold ' + stockColor + '">' + item.stock + '</p>';
+        html += '<p class="text-xs text-gray-400">In Stock</p>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Bottom bar with expiry and date added
+        var hasBottom = item.exp || dateAddedStr;
+        if (hasBottom) {
+            html += '<div class="border-t border-gray-100 px-3 py-2 text-xs flex justify-between items-center bg-gray-50/50">';
+            if (item.exp) {
+                html += '<span class="font-medium text-gray-500">Exp: ' + item.exp + '</span>';
+                html += '<span class="font-bold ' + expColor + '">' + expStatus + '</span>';
+            }
+            if (dateAddedStr) {
+                html += '<span class="text-gray-400 text-[10px]">Added: ' + dateAddedStr + '</span>';
+            }
+            html += '</div>';
+        }
+
+        html += '</div>';
+        listEl.innerHTML += html;
+    });
+
+    if (items.length === 0) {
+        listEl.innerHTML = '<div class="p-4 text-center text-sm text-gray-500">No items found</div>';
+    }
+};
+
 // Receipt Formatter (shared by checkout + dashboard details)
 // ═══════════════════════════════════════════════════════════════
 function formatReceipt(sale) {
@@ -1846,15 +1931,25 @@ window.handleImport = async function(event) {
             if (invSheet) {
                 let invData = XLSX.utils.sheet_to_json(invSheet);
                 let validInv = invData.filter(i => i.id !== undefined && i.id !== '');
+                // Get existing items to preserve dateAdded for updates
+                var existingItems = {};
+                try {
+                    var allExisting = await db.inventory.toArray();
+                    allExisting.forEach(function(item) { existingItems[item.id] = item; });
+                } catch(e) {}
+
                 validInv = validInv.map(i => {
+                    var parsedId = parseInt(i.id);
+                    var existing = existingItems[parsedId];
                     return {
                         ...i,
-                        id: parseInt(i.id),
+                        id: parsedId,
                         stock: parseFloat(i.stock) || 0,
                         price: parseFloat(i.price) || 0,
-                        exp: i.exp instanceof Date ? 
-                             (String(i.exp.getMonth()+1).padStart(2,'0') + '/' + i.exp.getFullYear()) : 
-                             String(i.exp || '')
+                        exp: i.exp instanceof Date ?
+                             (String(i.exp.getMonth()+1).padStart(2,'0') + '/' + i.exp.getFullYear()) :
+                             String(i.exp || ''),
+                        dateAdded: i.dateAdded || (existing ? existing.dateAdded : null) || new Date().toISOString()
                     };
                 }).filter(i => !isNaN(i.id));
                 
