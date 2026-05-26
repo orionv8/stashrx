@@ -328,18 +328,19 @@
                 </div>
                 <h1 class="text-[26px] font-extrabold tracking-tighter text-gray-900 leading-none mb-0.5">stash<span class="text-emerald-500">Rx</span></h1>
                 <p class="text-[10px] text-gray-400 mt-1 text-center uppercase tracking-[0.18em] font-semibold">Pharmacy Journal</p>
-                <button onclick="showPremiumModal()" id="manualProBadge" class="mt-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] uppercase tracking-wider font-bold px-4 py-1.5 rounded-full shadow-sm shadow-emerald-500/20 active:scale-95 transition">Unlock Premium</button>
-
-                <!-- Device ID & Status (always visible) -->
-                <div class="mt-3 w-full px-2">
-                    <div class="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[9px] text-gray-400 uppercase tracking-wider font-semibold">Device ID</span>
-                            <span id="sidebarPremiumStatus" class="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500">Free</span>
+                <!-- Combined Status Card -->
+                <div onclick="showPremiumModal()" class="mt-3 w-full active:scale-[0.98] transition cursor-pointer">
+                    <div id="sidebarStatusCard" class="bg-gradient-to-r from-gray-100 to-gray-50 rounded-xl px-3 py-2.5 border border-gray-200/80 relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span id="sidebarPremiumStatus" class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-300/60 text-gray-600">Free</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><path d="M9 18l6-6-6-6"/></svg>
                         </div>
-                        <div class="flex items-center justify-between mt-0.5">
-                            <span id="sidebarDeviceId" class="text-[12px] font-mono font-bold text-gray-700 select-all">--------</span>
-                            <button onclick="restoreDeviceId()" class="text-[9px] text-blue-500 font-semibold active:opacity-50">Change</button>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-[9px] text-gray-400 uppercase tracking-wider font-semibold">Device ID</div>
+                                <div id="sidebarDeviceId" class="text-[13px] font-mono font-bold text-gray-800 select-all tracking-wide">--------</div>
+                            </div>
+                            <button onclick="event.stopPropagation(); restoreDeviceId();" class="text-[10px] text-blue-500 font-semibold active:opacity-50 bg-blue-50 px-2 py-1 rounded-lg">Recover</button>
                         </div>
                     </div>
                 </div>
@@ -1201,149 +1202,165 @@ function closeAnalyticsModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Inventory Rendering Override — paginated with dateAdded
+// Inventory Rendering Override — with search, sort, pagination, dateAdded
 (function() {
     var INV_PAGE_SIZE = 50;
-    var invCurrentPage = 0;
     var invAllItems = [];
-    var invIsLoading = false;
+    var invFilteredItems = [];
+    var invDisplayCount = INV_PAGE_SIZE;
 
-    window.renderInventoryStatus = async function() {
-        var listEl = document.getElementById('inventoryStatusList');
-        if (!listEl) return;
+    function getSearchQuery() {
+        var el = document.getElementById('searchInput');
+        return el ? el.value.trim().toLowerCase() : '';
+    }
 
-        invAllItems = await db.inventory.toArray();
+    function getSortMode() {
+        var el = document.getElementById('invSort');
+        return el ? el.value : 'sold';
+    }
+
+    function filterAndSort(items) {
+        var query = getSearchQuery();
+        var sortMode = getSortMode();
         var now = new Date();
         var currentMonth = now.getMonth();
         var currentYear = now.getFullYear();
 
-        // Sort by expiry (nearest first)
-        invAllItems.sort(function(a, b) {
-            if (!a.exp) return 1;
-            if (!b.exp) return -1;
-            var aParts = a.exp.split('/');
-            var bParts = b.exp.split('/');
-            return new Date(aParts[1], aParts[0] - 1) - new Date(bParts[1], bParts[0] - 1);
+        // Filter
+        var filtered = items;
+        if (query) {
+            filtered = items.filter(function(item) {
+                var name = ((item.brand || '') + ' ' + (item.generic || '')).toLowerCase();
+                return name.indexOf(query) >= 0;
+            });
+        }
+
+        // Sort
+        filtered.sort(function(a, b) {
+            if (sortMode === 'name') {
+                return ((a.brand || a.generic || '').toLowerCase()).localeCompare((b.brand || b.generic || '').toLowerCase());
+            } else if (sortMode === 'stock') {
+                return (a.stock || 0) - (b.stock || 0);
+            } else if (sortMode === 'expiry') {
+                if (!a.exp) return 1;
+                if (!b.exp) return -1;
+                var ap = a.exp.split('/'), bp = b.exp.split('/');
+                return new Date(ap[1], ap[0]-1) - new Date(bp[1], bp[0]-1);
+            } else {
+                // Default: sold (by ID descending as proxy for recently active)
+                return (b.sold || 0) - (a.sold || 0);
+            }
         });
 
-        // Reset and render first page
-        invCurrentPage = 0;
-        listEl.innerHTML = '';
-        renderInvPage(listEl, currentMonth, currentYear);
-
-        // Show "Load More" or set up scroll-based loading
-        updateInvLoadMore(listEl);
-    };
-
-    function renderInvPage(listEl, currentMonth, currentYear) {
-        var start = invCurrentPage * INV_PAGE_SIZE;
-        var end = Math.min(start + INV_PAGE_SIZE, invAllItems.length);
-        var fragment = '';
-
-        for (var idx = start; idx < end; idx++) {
-            var item = invAllItems[idx];
-
-            // Expiry status
-            var expColor = '';
-            var expStatus = '';
-            if (item.exp) {
-                var parts = item.exp.split('/');
-                var expMonth = parseInt(parts[0]) - 1;
-                var expYear = parseInt(parts[1]);
-                var monthsDiff = (expYear - currentYear) * 12 + expMonth - currentMonth;
-                if (monthsDiff < 0) { expColor = 'text-red-500'; expStatus = 'Expired'; }
-                else if (monthsDiff <= 6) { expColor = 'text-orange-500'; expStatus = monthsDiff + ' mos.'; }
-                else if (monthsDiff <= 12) { expColor = 'text-yellow-500'; expStatus = monthsDiff + ' mos.'; }
-                else { expColor = 'text-gray-400'; expStatus = monthsDiff + ' mos.'; }
-            }
-
-            // Stock status
-            var stockColor = '';
-            if (item.stock <= 0) stockColor = 'text-red-500';
-            else if (item.stock <= 10) stockColor = 'text-orange-500';
-
-            // Date added — handle any format
-            var dateAddedStr = '';
-            if (item.dateAdded) {
-                var d = new Date(item.dateAdded);
-                if (!isNaN(d.getTime())) {
-                    dateAddedStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                } else {
-                    dateAddedStr = String(item.dateAdded);
-                }
-            }
-
-            fragment += '<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" onclick="openEditModal(' + item.id + ')">';
-            fragment += '<div class="p-3">';
-            fragment += '<div class="flex justify-between items-start">';
-            fragment += '<div class="flex-grow pr-4">';
-            fragment += '<p class="font-semibold text-gray-800">' + (item.brand || item.generic) + '</p>';
-            if (item.brand && item.generic) fragment += '<p class="text-xs text-gray-500">' + item.generic + '</p>';
-            fragment += '</div>';
-            fragment += '<div class="text-right flex-shrink-0">';
-            fragment += '<p class="font-bold ' + stockColor + '">' + item.stock + '</p>';
-            fragment += '<p class="text-xs text-gray-400">In Stock</p>';
-            fragment += '</div>';
-            fragment += '</div>';
-            fragment += '</div>';
-
-            // Bottom bar
-            var hasBottom = item.exp || dateAddedStr;
-            if (hasBottom) {
-                fragment += '<div class="border-t border-gray-100 px-3 py-2 text-xs flex justify-between items-center bg-gray-50/50">';
-                if (item.exp) {
-                    fragment += '<span class="font-medium text-gray-500">Exp: ' + item.exp + '</span>';
-                    fragment += '<span class="font-bold ' + expColor + '">' + expStatus + '</span>';
-                }
-                if (dateAddedStr) {
-                    fragment += '<span class="text-gray-600 font-medium text-[10px]">Added: ' + dateAddedStr + '</span>';
-                }
-                fragment += '</div>';
-            }
-            fragment += '</div>';
-        }
-
-        listEl.insertAdjacentHTML('beforeend', fragment);
-        invCurrentPage++;
+        return filtered;
     }
 
-    function updateInvLoadMore(listEl) {
-        // Remove existing load more button
-        var existing = document.getElementById('invLoadMoreBtn');
-        if (existing) existing.remove();
+    function renderCard(item) {
+        var now = new Date();
+        var currentMonth = now.getMonth();
+        var currentYear = now.getFullYear();
 
-        var totalLoaded = invCurrentPage * INV_PAGE_SIZE;
-        if (totalLoaded < invAllItems.length) {
-            var remaining = invAllItems.length - totalLoaded;
-            var btn = document.createElement('div');
-            btn.id = 'invLoadMoreBtn';
-            btn.className = 'text-center py-4';
-            btn.innerHTML = '<button onclick="loadMoreInventory()" class="bg-emerald-50 text-emerald-600 font-semibold text-[13px] px-6 py-2.5 rounded-xl active:bg-emerald-100 transition border border-emerald-100">Load More (' + remaining + ' remaining)</button>';
-            listEl.appendChild(btn);
+        var expColor = '', expStatus = '';
+        if (item.exp) {
+            var parts = item.exp.split('/');
+            var expMonth = parseInt(parts[0]) - 1;
+            var expYear = parseInt(parts[1]);
+            var monthsDiff = (expYear - currentYear) * 12 + expMonth - currentMonth;
+            if (monthsDiff < 0) { expColor = 'text-red-500'; expStatus = 'Expired'; }
+            else if (monthsDiff <= 6) { expColor = 'text-orange-500'; expStatus = monthsDiff + ' mos.'; }
+            else if (monthsDiff <= 12) { expColor = 'text-yellow-500'; expStatus = monthsDiff + ' mos.'; }
+            else { expColor = 'text-gray-400'; expStatus = monthsDiff + ' mos.'; }
         }
 
-        // Show count
+        var stockColor = '';
+        if (item.stock <= 0) stockColor = 'text-red-500';
+        else if (item.stock <= 10) stockColor = 'text-orange-500';
+
+        var dateAddedStr = '';
+        if (item.dateAdded) {
+            var d = new Date(item.dateAdded);
+            dateAddedStr = !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : String(item.dateAdded);
+        }
+
+        var h = '<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" onclick="openEditModal(' + item.id + ')">';
+        h += '<div class="p-3"><div class="flex justify-between items-start">';
+        h += '<div class="flex-grow pr-4">';
+        h += '<p class="font-semibold text-gray-800">' + (item.brand || item.generic) + '</p>';
+        if (item.brand && item.generic) h += '<p class="text-xs text-gray-500">' + item.generic + '</p>';
+        h += '</div><div class="text-right flex-shrink-0">';
+        h += '<p class="font-bold ' + stockColor + '">' + item.stock + '</p>';
+        h += '<p class="text-xs text-gray-400">In Stock</p>';
+        h += '</div></div></div>';
+
+        if (item.exp || dateAddedStr) {
+            h += '<div class="border-t border-gray-100 px-3 py-2 text-xs flex justify-between items-center bg-gray-50/50">';
+            if (item.exp) {
+                h += '<span class="font-medium text-gray-500">Exp: ' + item.exp + '</span>';
+                h += '<span class="font-bold ' + expColor + '">' + expStatus + '</span>';
+            }
+            if (dateAddedStr) h += '<span class="text-gray-600 font-medium text-[10px]">Added: ' + dateAddedStr + '</span>';
+            h += '</div>';
+        }
+        h += '</div>';
+        return h;
+    }
+
+    function renderList() {
+        var listEl = document.getElementById('inventoryStatusList');
+        if (!listEl) return;
+
+        invFilteredItems = filterAndSort(invAllItems);
+        var showing = Math.min(invDisplayCount, invFilteredItems.length);
+
+        var html = '';
+        for (var i = 0; i < showing; i++) {
+            html += renderCard(invFilteredItems[i]);
+        }
+
+        if (invFilteredItems.length === 0) {
+            html = '<div class="p-4 text-center text-sm text-gray-500">' + (getSearchQuery() ? 'No items match your search' : 'No items found') + '</div>';
+        }
+
+        // Load more button
+        if (showing < invFilteredItems.length) {
+            var remaining = invFilteredItems.length - showing;
+            html += '<div class="text-center py-4"><button onclick="loadMoreInventory()" class="bg-emerald-50 text-emerald-600 font-semibold text-[13px] px-6 py-2.5 rounded-xl active:bg-emerald-100 transition border border-emerald-100">Show More (' + remaining + ' remaining)</button></div>';
+        }
+
+        listEl.innerHTML = html;
+
+        // Count label
         var countEl = document.getElementById('invCountLabel');
         if (!countEl) {
             countEl = document.createElement('div');
             countEl.id = 'invCountLabel';
-            countEl.className = 'text-center text-[11px] text-gray-400 py-2';
+            countEl.className = 'text-center text-[11px] text-gray-400 py-1';
             listEl.parentNode.insertBefore(countEl, listEl);
         }
-        countEl.textContent = 'Showing ' + Math.min(totalLoaded, invAllItems.length) + ' of ' + invAllItems.length + ' items';
+        countEl.textContent = (getSearchQuery() ? 'Found ' + invFilteredItems.length + ' of ' + invAllItems.length : showing + ' of ' + invAllItems.length + ' items');
     }
 
-    window.loadMoreInventory = function() {
-        var listEl = document.getElementById('inventoryStatusList');
-        var now = new Date();
-        renderInvPage(listEl, now.getMonth(), now.getFullYear());
-        updateInvLoadMore(listEl);
+    window.renderInventoryStatus = async function() {
+        invAllItems = await db.inventory.toArray();
+        invDisplayCount = INV_PAGE_SIZE;
+        renderList();
     };
 
-    if (invAllItems.length === 0) {
-        var listEl = document.getElementById('inventoryStatusList');
-        if (listEl) listEl.innerHTML = '<div class="p-4 text-center text-sm text-gray-500">No items found</div>';
-    }
+    window.loadMoreInventory = function() {
+        invDisplayCount += INV_PAGE_SIZE;
+        renderList();
+    };
+
+    // Override search and sort to work with our renderer
+    window.filterInventory = function() {
+        invDisplayCount = INV_PAGE_SIZE;
+        renderList();
+    };
+
+    window.handleSortChange = function() {
+        invDisplayCount = INV_PAGE_SIZE;
+        renderList();
+    };
 })();
 
 // Receipt Formatter (shared by checkout + dashboard details)
@@ -2608,16 +2625,19 @@ window.restoreDeviceId = function() {
 function updateSidebarInfo() {
     var devEl = document.getElementById('sidebarDeviceId');
     var statusEl = document.getElementById('sidebarPremiumStatus');
+    var cardEl = document.getElementById('sidebarStatusCard');
     if (devEl) {
         devEl.textContent = typeof getDeviceID === 'function' ? getDeviceID() : '--------';
     }
-    if (statusEl) {
+    if (statusEl && cardEl) {
         if (typeof isPremium !== 'undefined' && isPremium) {
             statusEl.textContent = 'Premium';
-            statusEl.className = 'text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
+            statusEl.className = 'text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700';
+            cardEl.className = 'bg-gradient-to-r from-emerald-50 to-emerald-100/50 rounded-xl px-3 py-2.5 border border-emerald-200/80 relative overflow-hidden';
         } else {
             statusEl.textContent = 'Free';
-            statusEl.className = 'text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500';
+            statusEl.className = 'text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-300/60 text-gray-600';
+            cardEl.className = 'bg-gradient-to-r from-gray-100 to-gray-50 rounded-xl px-3 py-2.5 border border-gray-200/80 relative overflow-hidden';
         }
     }
 }
