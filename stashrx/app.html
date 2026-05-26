@@ -142,39 +142,29 @@
         /* ═══════════════════════════════════════════════
            Landscape tablet optimization
            ═══════════════════════════════════════════════ */
-        @media (min-width: 768px) and (orientation: landscape) {
+        /* Wide viewport: tablets in landscape, desktops, large screens */
+        @media (min-width: 1024px) {
             header.glass-header {
-                max-width: 680px !important;
-                padding-top: 4px !important;
-                padding-bottom: 8px;
+                max-width: 720px !important;
             }
             #screenLedger, #screenExpenses, #screenDashboard, #screenInventory {
-                max-width: 680px !important;
-            }
-            #screenLedger main,
-            #screenInventory > div:first-child + main {
-                padding-top: 100px !important;
-            }
-            #screenInventory > div:first-child {
-                padding-top: 100px !important;
-            }
-            #screenExpenses > div:first-child,
-            #screenDashboard > div:first-child {
-                padding-top: 70px !important;
+                max-width: 720px !important;
             }
             #cartDrawer {
-                max-width: 680px;
-                left: 0; right: 0;
-                margin: 0 auto;
+                max-width: 720px !important;
+                left: 0 !important; right: 0 !important;
+                margin: 0 auto !important;
             }
             #miniCart {
-                max-width: 648px;
+                max-width: 688px !important;
+                left: 0 !important; right: 0 !important;
+                margin: 0 auto !important;
             }
             #sideMenuPanel {
                 width: 320px !important;
             }
             #analyticsModalCard {
-                max-width: 640px;
+                max-width: 660px;
                 margin: 0 auto;
             }
             #paymentModalCard, #discountModalCard, #iosModalCard {
@@ -281,7 +271,7 @@
 <body class="bg-[#F2F2F7] text-gray-900 h-screen flex flex-col overflow-hidden">
 
     <!-- Glass Header -->
-    <header class="glass-header z-20 flex-shrink-0 pb-3 px-4 fixed top-0 w-full" style="padding-top: calc(env(safe-area-inset-top, 8px) + 4px);">
+    <header class="glass-header z-20 flex-shrink-0 pb-3 px-4 fixed top-0 w-full" style="padding-top: max(env(safe-area-inset-top, 12px), 12px);">
         <div class="flex justify-between items-center mb-3 relative">
             <button onclick="toggleMenu()" class="text-emerald-500 text-2xl p-2 -ml-1 active:opacity-50 transition relative z-10 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl active:bg-emerald-50">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -2609,58 +2599,7 @@ window.restoreDeviceId = function() {
 
 // (URL parameter device ID restore moved to <head> to run before obfuscated code)
 
-// Landscape layout adjustment (JS-based)
-(function() {
-    function adjustLayout() {
-        var w = window.innerWidth;
-        var h = window.innerHeight;
-        var isTablet = w >= 768;
-        var isLandscape = w > h;
-
-        if (!isTablet) return; // phone — no adjustments
-
-        var colW = isLandscape ? '720px' : '520px';
-        var miniW = isLandscape ? '688px' : '488px';
-
-        // Screens
-        var screens = document.querySelectorAll('#screenLedger, #screenExpenses, #screenDashboard, #screenInventory');
-        for (var i = 0; i < screens.length; i++) {
-            screens[i].style.maxWidth = colW;
-            screens[i].style.marginLeft = 'auto';
-            screens[i].style.marginRight = 'auto';
-        }
-
-        // Header
-        var header = document.querySelector('header.glass-header');
-        if (header) {
-            header.style.maxWidth = colW;
-            header.style.left = '0';
-            header.style.right = '0';
-            header.style.marginLeft = 'auto';
-            header.style.marginRight = 'auto';
-        }
-
-        // Cart drawer
-        var cart = document.getElementById('cartDrawer');
-        if (cart) { cart.style.maxWidth = colW; cart.style.left = '0'; cart.style.right = '0'; cart.style.marginLeft = 'auto'; cart.style.marginRight = 'auto'; }
-
-        // Mini cart
-        var mini = document.getElementById('miniCart');
-        if (mini) { mini.style.maxWidth = miniW; mini.style.left = '0'; mini.style.right = '0'; mini.style.marginLeft = 'auto'; mini.style.marginRight = 'auto'; }
-    }
-
-    // Run on load, resize, and orientation change
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', adjustLayout);
-    } else {
-        adjustLayout();
-    }
-    window.addEventListener('resize', adjustLayout);
-    window.addEventListener('orientationchange', function() { setTimeout(adjustLayout, 500); });
-    // Also re-run periodically to catch late-rendered elements
-    setTimeout(adjustLayout, 1000);
-    setTimeout(adjustLayout, 3000);
-})();
+// (Landscape layout now handled by CSS @media (min-width: 1024px) — no JS needed)
 
 // Update sidebar device ID and premium status display
 function updateSidebarInfo() {
