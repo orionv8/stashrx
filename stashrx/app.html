@@ -1351,15 +1351,31 @@ function closeAnalyticsModal() {
         renderList();
     };
 
-    // Override search and sort to work with our renderer
+    // Override search and sort — only intercept on Inventory screen
+    var _origFilterInventory = typeof filterInventory === 'function' ? filterInventory : null;
+    var _origHandleSortChange = typeof handleSortChange === 'function' ? handleSortChange : null;
+
+    function isInventoryScreen() {
+        var invScreen = document.getElementById('screenInventory');
+        return invScreen && invScreen.style.display !== 'none' && !invScreen.classList.contains('hidden');
+    }
+
     window.filterInventory = function() {
-        invDisplayCount = INV_PAGE_SIZE;
-        renderList();
+        if (isInventoryScreen()) {
+            invDisplayCount = INV_PAGE_SIZE;
+            renderList();
+        } else if (_origFilterInventory) {
+            _origFilterInventory();
+        }
     };
 
     window.handleSortChange = function() {
-        invDisplayCount = INV_PAGE_SIZE;
-        renderList();
+        if (isInventoryScreen()) {
+            invDisplayCount = INV_PAGE_SIZE;
+            renderList();
+        } else if (_origHandleSortChange) {
+            _origHandleSortChange();
+        }
     };
 })();
 
@@ -2593,32 +2609,57 @@ window.restoreDeviceId = function() {
 
 // (URL parameter device ID restore moved to <head> to run before obfuscated code)
 
-// Landscape layout adjustment (JS-based, more reliable than CSS media queries on iPad Safari)
+// Landscape layout adjustment (JS-based)
 (function() {
-    function adjustLandscape() {
-        var isTablet = window.innerWidth >= 768;
-        var isLandscape = window.innerWidth > window.innerHeight;
-        var maxW = isTablet && isLandscape ? '680px' : isTablet ? '520px' : '';
+    function adjustLayout() {
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        var isTablet = w >= 768;
+        var isLandscape = w > h;
 
-        ['screenLedger','screenExpenses','screenDashboard','screenInventory'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.style.maxWidth = maxW;
-        });
+        if (!isTablet) return; // phone — no adjustments
 
+        var colW = isLandscape ? '720px' : '520px';
+        var miniW = isLandscape ? '688px' : '488px';
+
+        // Screens
+        var screens = document.querySelectorAll('#screenLedger, #screenExpenses, #screenDashboard, #screenInventory');
+        for (var i = 0; i < screens.length; i++) {
+            screens[i].style.maxWidth = colW;
+            screens[i].style.marginLeft = 'auto';
+            screens[i].style.marginRight = 'auto';
+        }
+
+        // Header
         var header = document.querySelector('header.glass-header');
-        if (header) header.style.maxWidth = maxW;
+        if (header) {
+            header.style.maxWidth = colW;
+            header.style.left = '0';
+            header.style.right = '0';
+            header.style.marginLeft = 'auto';
+            header.style.marginRight = 'auto';
+        }
 
+        // Cart drawer
         var cart = document.getElementById('cartDrawer');
-        if (cart) cart.style.maxWidth = maxW;
+        if (cart) { cart.style.maxWidth = colW; cart.style.left = '0'; cart.style.right = '0'; cart.style.marginLeft = 'auto'; cart.style.marginRight = 'auto'; }
 
+        // Mini cart
         var mini = document.getElementById('miniCart');
-        if (mini) mini.style.maxWidth = isTablet && isLandscape ? '648px' : isTablet ? '488px' : '';
+        if (mini) { mini.style.maxWidth = miniW; mini.style.left = '0'; mini.style.right = '0'; mini.style.marginLeft = 'auto'; mini.style.marginRight = 'auto'; }
     }
 
-    window.addEventListener('resize', adjustLandscape);
-    window.addEventListener('orientationchange', function() { setTimeout(adjustLandscape, 300); });
-    document.addEventListener('DOMContentLoaded', adjustLandscape);
-    adjustLandscape();
+    // Run on load, resize, and orientation change
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', adjustLayout);
+    } else {
+        adjustLayout();
+    }
+    window.addEventListener('resize', adjustLayout);
+    window.addEventListener('orientationchange', function() { setTimeout(adjustLayout, 500); });
+    // Also re-run periodically to catch late-rendered elements
+    setTimeout(adjustLayout, 1000);
+    setTimeout(adjustLayout, 3000);
 })();
 
 // Update sidebar device ID and premium status display
