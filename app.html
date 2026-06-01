@@ -22,25 +22,25 @@
         body { -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
         
         .glass-header {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 0.5px solid rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 0.5px solid rgba(0,0,0,0.06);
         }
-        
+
         .ios-toggle:checked {
-            background-color: #10b981; /* Emerald 500 */
+            background-color: #10b981;
         }
         .ios-toggle:checked:after {
             transform: translateX(100%);
             border-color: white;
         }
-        
+
         /* Drawer Animations */
         #cartDrawer { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
         .drawer-open { transform: translateY(0%); }
         .drawer-closed { transform: translateY(100%); }
-        
+
         /* Safe area bottom padding for iPhone home indicator */
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
 
@@ -59,6 +59,143 @@
             -webkit-appearance: none;
             margin: 0;
         }
+
+        /* ═══════════════════════════════════════════════
+           iPad / Tablet Responsive Layout
+           Centers content in a phone-style column on
+           screens wider than 768px for optimal UX.
+           ═══════════════════════════════════════════════ */
+        @media (min-width: 768px) {
+            body {
+                background: linear-gradient(145deg, #E8E8ED 0%, #D1D1D6 100%);
+            }
+
+            /* Center fixed header on iPad */
+            header.glass-header {
+                max-width: 520px;
+                left: 0; right: 0;
+                margin: 0 auto;
+                border-radius: 0 0 16px 16px;
+                border: 0.5px solid rgba(0,0,0,0.06);
+                border-top: none;
+                box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+            }
+
+            /* Center each screen's content */
+            #screenLedger, #screenExpenses, #screenDashboard, #screenInventory {
+                max-width: 520px;
+                margin-left: auto;
+                margin-right: auto;
+                background: #F2F2F7;
+                box-shadow: 0 0 40px rgba(0,0,0,0.08);
+            }
+
+            /* Center fixed bottom elements */
+            #miniCart {
+                max-width: 488px;
+                left: 0 !important; right: 0 !important;
+                margin: 0 auto;
+            }
+            #cartDrawer {
+                max-width: 520px;
+                left: 0; right: 0;
+                margin: 0 auto;
+                border-radius: 20px 20px 0 0;
+            }
+
+            /* Wider sidebar on iPad */
+            #sideMenuPanel {
+                width: 300px !important;
+                border-radius: 0 20px 20px 0;
+            }
+
+            /* Modals slightly larger on iPad */
+            #iosModalCard {
+                max-width: 320px;
+            }
+            #addModalCard, #editModalCard {
+                max-width: 420px;
+            }
+
+            /* FAB buttons stay centered within the column */
+            #screenDashboard button[onclick="openAnalyticsModal()"],
+            #screenInventory button[onclick="openAddModal()"] {
+                left: 50% !important;
+            }
+        }
+
+        /* iPad landscape optimization */
+        @media (min-width: 1024px) {
+            header.glass-header {
+                max-width: 720px !important;
+            }
+            #screenLedger, #screenExpenses, #screenDashboard, #screenInventory {
+                max-width: 720px !important;
+            }
+            #cartDrawer {
+                max-width: 720px !important;
+                left: 0 !important; right: 0 !important;
+                margin: 0 auto !important;
+            }
+            #miniCart {
+                max-width: 688px !important;
+                left: 0 !important; right: 0 !important;
+                margin: 0 auto !important;
+            }
+            #sideMenuPanel {
+                width: 320px !important;
+            }
+            #analyticsModalCard {
+                max-width: 660px;
+                margin: 0 auto;
+            }
+            #paymentModalCard, #discountModalCard, #iosModalCard {
+                max-width: 360px;
+            }
+            #addModalCard, #editModalCard {
+                max-width: 480px;
+            }
+        }
+
+        /* Sidebar safe area & touch target fixes */
+        #sideMenuPanel {
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+        #settingsNavPanel .settings-close-area {
+            padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 8px);
+        }
+
+        /* Ensure all buttons meet 44px minimum touch target */
+        #settingsNavPanel button,
+        #mainNavPanel nav a {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* General design polish */
+        #sideMenuPanel {
+            transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.08);
+        }
+        #sideMenu .absolute.inset-0.bg-black\/40 {
+            transition: opacity 0.3s ease;
+        }
+        #addModalCard, #editModalCard {
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+        #miniCart {
+            box-shadow: 0 8px 30px rgba(16,185,129,0.3), 0 2px 8px rgba(0,0,0,0.08);
+        }
+        #cartDrawer {
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.12);
+        }
+        .active\:scale-95:active {
+            transition: transform 0.1s ease;
+        }
+        input:focus, select:focus, textarea:focus {
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        }
     </style>
 
     <link rel="manifest" href="manifest.json?v=4">
@@ -69,6 +206,25 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then(reg => {
                     console.log('SW registered!', reg);
+
+                    // Check for updates immediately, then every 60 seconds
+                    reg.update();
+                    setInterval(() => reg.update(), 60000);
+
+                    // When a new SW is waiting, activate it and reload
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'activated') {
+                                    if (navigator.serviceWorker.controller) {
+                                        console.log('New version activated, reloading...');
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        }
+                    });
                 }).catch(err => console.log('SW registration failed', err));
             });
         }
@@ -681,9 +837,17 @@ let cashflowChart = null;
 let topItemsChart = null;
 
 async function updateCharts() {
-    const startInput = document.getElementById('reportStartDate').value;
-    const endInput = document.getElementById('reportEndDate').value;
-    if (!startInput || !endInput) return;
+    const startEl = document.getElementById('reportStartDate');
+    const endEl = document.getElementById('reportEndDate');
+    if (!startEl.value) {
+        const now = new Date();
+        startEl.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    }
+    if (!endEl.value) {
+        const now = new Date();
+        endEl.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    }
+    const startInput = startEl.value;
 
     const startStr = startInput + "T00:00:00";
     const endStr = endInput + "T23:59:59";
