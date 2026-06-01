@@ -2202,6 +2202,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             try {
+                const deviceId = getDeviceID();
                 const inv = await db.inventory.toArray();
                 const sal = await db.sales.toArray();
                 const exp = await db.expenses.toArray();
@@ -2209,7 +2210,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (db.customers) {
                      cus = await db.customers.toArray();
                 }
-                
+                    
                 const backupPayload = JSON.stringify({
                     lastSync: new Date().toISOString(),
                     inventory: JSON.stringify(inv),
@@ -2217,7 +2218,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     expenses: JSON.stringify(exp),
                     customers: JSON.stringify(cus)
                 });
-                
+                    
                 const storageRef = firebase.storage().ref();
                 const backupRef = storageRef.child('backups/' + deviceId + '.json');
                 await backupRef.putString(backupPayload, 'raw', { contentType: 'application/json' });
