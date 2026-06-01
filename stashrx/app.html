@@ -2196,6 +2196,10 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(async () => {
             if (!navigator.onLine) return;
             if (typeof isPremium !== 'undefined' && !isPremium) return;
+            if (typeof db === 'undefined') {
+                console.warn('[stashRx] Sync loop: db is not yet defined. Skipping this interval.');
+                return;
+            }
             
             try {
                 const inv = await db.inventory.toArray();
