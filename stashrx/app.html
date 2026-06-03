@@ -2195,7 +2195,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Sync every 5 minutes if online
         setInterval(async () => {
             if (!navigator.onLine) return;
+            
+            // Re-verify premium status inside the loop to avoid race conditions on load
+            if (typeof checkPremiumStatus === 'function') {
+                await checkPremiumStatus();
+            }
             if (typeof isPremium !== 'undefined' && !isPremium) return;
+            
             if (typeof db === 'undefined') {
                 console.warn('[stashRx] Sync loop: db is not yet defined. Skipping this interval.');
                 return;
