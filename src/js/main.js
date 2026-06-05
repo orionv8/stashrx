@@ -67,14 +67,59 @@ async function main() {
         console.error("Restore failed", err);
     }
 
+    // --- Expanded Logic Stubs ---
+    // In a real refactor, these would be imported from modules.
+    // We are expanding them here to provide a better baseline for testing.
+    
+    window.seedData = async () => {
+        console.log("Initializing seed data...");
+        const count = await db.inventory.count();
+        if (count === 0) {
+            await db.inventory.add({generic: "Sample Item", brand: "Brand A", exp: "2026-12-31", stock: 10});
+            console.log("Seed data added.");
+        } else {
+            console.log("Inventory already seeded.");
+        }
+    };
+
+    window.toggleMenu = () => {
+        const menu = document.getElementById('side-menu');
+        if (menu) {
+            menu.classList.toggle('open');
+            console.log("Menu toggled.");
+        } else {
+            console.warn("Menu element not found.");
+        }
+    };
+
+    window.showScreen = (screenId) => {
+        console.log(`Switching to screen: ${screenId}`);
+        const screens = document.querySelectorAll('.screen');
+        screens.forEach(s => s.style.display = 'none');
+        const target = document.getElementById(screenId);
+        if (target) {
+            target.style.display = 'block';
+        } else {
+            console.error(`Screen ${screenId} not found.`);
+        }
+    };
+
+    window.checkPremiumStatus = async () => {
+        console.log("Checking premium status...");
+        const license = localStorage.getItem('stashRx_license');
+        if (license) {
+            isPremium = true;
+            console.log("Premium active.");
+        } else {
+            isPremium = false;
+            console.log("Standard mode.");
+        }
+        return isPremium;
+    };
+
     // Now safely boot the app
-    if (typeof window.seedData === 'function') {
-        window.seedData();
-    }
-    if (typeof window.checkPremiumStatus === 'function') {
-        // Assuming checkPremiumStatus is defined elsewhere or stubbed
-        // window.checkPremiumStatus();
-    }
+    await window.seedData();
+    await window.checkPremiumStatus();
 }
 
 // Start the application once the DOM is loaded

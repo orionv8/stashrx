@@ -199,7 +199,9 @@ def add_cors(response):
     if request.path.startswith("/admin"):
         return response
         
-    allowlist = ["http://localhost:8080", "https://stashrx-63954.web.app", "https://stashrx-63954.firebaseapp.com"]
+    allowlist_env = os.environ.get("CORS_ALLOWLIST", "http://localhost:8080,https://stashrx-63954.web.app,https://stashrx-63954.firebaseapp.com")
+    allowlist = [url.strip() for url in allowlist_env.split(",")]
+    
     origin = request.headers.get("Origin")
     if origin in allowlist:
         response.headers["Access-Control-Allow-Origin"] = origin

@@ -1,1 +1,0 @@
-stashRx is provided 'as is' without warranty of any kind. The developer shall not be held liable for any data loss, hardware failure, or business interruption. The user is solely responsible for ensuring that all data inputs comply with the Philippine Data Privacy Act of 2012.
