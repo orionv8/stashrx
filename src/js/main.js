@@ -22,7 +22,12 @@ sysDb.version(1).stores({
 
 // Expose to global scope for inline non-module scripts
 window.db = db;
-window.cart = cart;
+Object.defineProperty(window, 'cart', {
+    get() { return cart; },
+    set(v) { cart = v; },
+    configurable: true,
+    enumerable: true
+});
 Object.defineProperty(window, 'isPremium', {
     get() { return isPremium; },
     set(v) { isPremium = v; },
