@@ -1,0 +1,1 @@
+We collect operational data (inventory, transactions) and registry data (SC/PWD IDs) solely for the purpose of the 'Silent Cloud Sync' backup feature. Your data is secured in Google Cloud servers and is restricted to your unique Device ID. We do not sell, analyze, or distribute your pharmacy's private data to any third parties.

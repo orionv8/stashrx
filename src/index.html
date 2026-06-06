@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>stashRx</title>
     <link rel="stylesheet" href="./css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').then(reg => {
+            console.log('SW registered!', reg);
+          }).catch(err => console.log('SW registration failed', err));
+        });
+      }
+    </script>
     <script type="module" src="./js/main.js"></script>
 </head>
 <body>
@@ -1401,6 +1411,61 @@ document.addEventListener('DOMContentLoaded', function() {
 // =======================================================================
 
 </script>
+
+    <!-- Payment Method Modal -->
+    <div id="paymentModalOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70] flex items-center justify-center p-4 opacity-0 hidden transition-opacity duration-200">
+        <div id="paymentModalCard" class="bg-white w-full max-w-xs rounded-2xl shadow-xl overflow-hidden transform scale-95 transition-all duration-200">
+            <div class="p-5 text-center">
+                <h3 class="font-bold text-lg mb-4">Select Payment</h3>
+                <div class="space-y-3">
+                    <button onclick="selectPaymentMethod('Cash')" class="w-full bg-emerald-500 text-white font-semibold py-3 rounded-lg">Cash</button>
+                    <button onclick="selectPaymentMethod('GCash')" class="w-full bg-blue-500 text-white font-semibold py-3 rounded-lg">GCash</button>
+                    <button onclick="selectPaymentMethod('Other')" class="w-full bg-gray-500 text-white font-semibold py-3 rounded-lg">Other</button>
+                </div>
+            </div>
+            <div class="border-t border-gray-200">
+                <button onclick="closePaymentModal()" class="w-full py-3 text-gray-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Payment Modal -->
+    <div id="cashModalOverlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80] flex items-center justify-center p-4 opacity-0 hidden transition-opacity duration-200">
+        <div id="cashModalCard" class="bg-white w-full max-w-xs rounded-2xl shadow-xl overflow-hidden transform scale-95 transition-all duration-200">
+            <div class="p-5">
+                <h3 class="font-bold text-lg text-center mb-2">Cash Payment</h3>
+                <div class="text-center mb-4">
+                    <p class="text-gray-500">Total Due</p>
+                    <p id="cashTotalDue" class="text-3xl font-bold">₱0.00</p>
+                </div>
+                <input type="number" id="cashAmountTendered" class="w-full border-2 border-gray-300 rounded-lg p-3 text-center text-xl mb-4" placeholder="Enter amount">
+                <button onclick="processCashPayment()" class="w-full bg-emerald-500 text-white font-semibold py-3 rounded-lg">Confirm Payment</button>
+            </div>
+            <div class="border-t border-gray-200">
+                <button onclick="closeCashModal()" class="w-full py-3 text-gray-600">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receiptModalOverlay" class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 opacity-0 hidden transition-opacity duration-200">
+        <div id="receiptModalCard" class="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden transform scale-95 transition-all duration-200">
+            <div class="p-5">
+                <h2 class="text-2xl font-bold text-center mb-4">Transaction Complete</h2>
+                <div id="receiptDetails" class="text-sm space-y-2 mb-4 border-b pb-4">
+                    <!-- Receipt details will be injected here -->
+                </div>
+                <div id="receiptItems" class="text-sm space-y-1 mb-4 max-h-40 overflow-y-auto">
+                    <!-- Items will be injected here -->
+                </div>
+                <div id="receiptTotal" class="text-right font-bold text-lg mb-4">
+                    <!-- Total will be injected here -->
+                </div>
+                 <button onclick="closeReceiptModal()" class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </body>
 </html>
