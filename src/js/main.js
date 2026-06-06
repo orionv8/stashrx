@@ -20,6 +20,16 @@ sysDb.version(1).stores({
     settings: 'id'
 });
 
+// Expose to global scope for inline non-module scripts
+window.db = db;
+window.cart = cart;
+Object.defineProperty(window, 'isPremium', {
+    get() { return isPremium; },
+    set(v) { isPremium = v; },
+    configurable: true,
+    enumerable: true
+});
+
 // --- OBFUSCATED LOGIC (Placeholder) ---
 // The original obfuscated code is extensive and has been moved to a separate file
 // to be loaded dynamically if needed, or refactored later.
