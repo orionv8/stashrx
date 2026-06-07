@@ -7,7 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
-    "build": "vite build && mv dist/index.html dist/app.html && cp index.html dist/index.html && cp manifest.json sw.js icon-192.png icon-512.png favicon.ico src/logo.jpg dist/ 2>/dev/null; true"
+    "build": "vite build && mv dist/index.html dist/app.html && cp index.html dist/index.html && mkdir -p dist/stashrx && cp manifest.json sw.js icon-192.png icon-512.png favicon.ico terms.txt privacy.txt src/logo.jpg dist/ && cp manifest.json sw.js icon-192.png icon-512.png favicon.ico terms.txt privacy.txt src/logo.jpg dist/stashrx/ && cp dist/app.html dist/stashrx/app.html"
   },
   "repository": {
     "type": "git",
