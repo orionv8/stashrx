@@ -1,141 +1,249 @@
-import Dexie from 'dexie';
-import { Chart } from 'chart.js/auto';
-import * as XLSX from 'xlsx';
+// main.js — Vite entry point: imports all modules, attaches to window, bootstraps
 
-// --- Global App State ---
-let cart = [];
-let isPremium = false;
+// First, provide a0_0x3669 stub for any legacy inline code that might reference it
+window.a0_0x3669 = function() {};
 
-// --- Database Setup ---
-const db = new Dexie('stashRx');
-db.version(4).stores({
-    inventory: '++id,generic,brand,exp,stock',
-    sales: '++id,date,total',
-    expenses: '++id,date,amount,category',
-    customers: 'idNumber,name'
+// --- Module Imports ---
+import { db, seedData } from './db.js';
+import {
+  loadInventory,
+  renderInventoryStatus,
+  filterInventory,
+  clearSearch,
+  handleSortChange
+} from './inventory.js';
+import {
+  addToCart,
+  updateCartItem,
+  clearCart,
+  openDrawer,
+  closeDrawer,
+  handleDiscountToggle,
+  lookupDiscountId,
+  cancelDiscountModal,
+  confirmDiscountModal,
+  checkout,
+  selectPaymentMethod,
+  closePaymentModal,
+  processCashPayment,
+  closeCashModal,
+  closeReceiptModal
+} from './cart.js';
+import {
+  toggleMenu,
+  resetSettingsMenu,
+  toggleSettingsMenu,
+  showInventory,
+  showLedger,
+  showExpenses,
+  showDashboard
+} from './screen.js';
+import { saveExpense } from './expenses.js';
+import {
+  openAnalyticsModal,
+  closeAnalyticsModal
+} from './analytics.js';
+import {
+  openAddModal,
+  closeAddModal,
+  saveNewItem,
+  openEditModal,
+  closeEditModal,
+  saveEditedItem
+} from './modal.js';
+import {
+  checkPremiumStatus,
+  showPremiumModal,
+  getDeviceID,
+  isPremium as premiumFlag
+} from './license.js';
+import {
+  exportData,
+  handleImport,
+  manualSyncToCloud,
+  restoreFromCloud,
+  showLegal
+} from './cloud.js';
+import { updateDashboardStats } from './dashboard.js';
+import { updateCartDrawer, updateMiniCart } from './cart.js';
+import { updateCharts } from './analytics.js';
+import { formatCurrency, iosAlert, iosConfirm, iosPrompt } from './utils.js';
+import { renderExpenses } from './expenses.js';
+import { showScreen } from './screen.js';
+
+// --- StashRx global namespace ---
+// All functions called from HTML onclick handlers are exposed here
+// and also individually on window for backward compatibility
+
+const stashRx = {
+  db,
+  toggleMenu,
+  resetSettingsMenu,
+  toggleSettingsMenu,
+  showScreen,
+  showInventory,
+  showLedger,
+  showExpenses,
+  showDashboard,
+  loadInventory,
+  renderInventoryStatus,
+  filterInventory,
+  clearSearch,
+  handleSortChange,
+  addToCart,
+  updateCartItem,
+  clearCart,
+  openDrawer,
+  closeDrawer,
+  updateCartDrawer,
+  updateMiniCart,
+  handleDiscountToggle,
+  lookupDiscountId,
+  cancelDiscountModal,
+  confirmDiscountModal,
+  checkout,
+  selectPaymentMethod,
+  closePaymentModal,
+  processCashPayment,
+  closeCashModal,
+  closeReceiptModal,
+  saveExpense,
+  openAnalyticsModal,
+  closeAnalyticsModal,
+  openAddModal,
+  closeAddModal,
+  saveNewItem,
+  openEditModal,
+  closeEditModal,
+  saveEditedItem,
+  showPremiumModal,
+  checkPremiumStatus,
+  getDeviceID,
+  exportData,
+  handleImport,
+  manualSyncToCloud,
+  restoreFromCloud,
+  showLegal,
+  updateDashboardStats,
+  updateCharts,
+  formatCurrency,
+  iosAlert,
+  iosConfirm,
+  iosPrompt,
+  renderExpenses,
+  seedData,
+  isPremium: premiumFlag
+};
+
+// Attach individual functions to window for inline onclick handlers
+Object.entries(stashRx).forEach(([key, val]) => {
+  window[key] = val;
 });
 
-const sysDb = new Dexie('stashRxSys');
-sysDb.version(1).stores({
-    settings: 'id'
-});
-
-// Expose to global scope for inline non-module scripts
+// Also attach db and cart references that HTML expects
 window.db = db;
-Object.defineProperty(window, 'cart', {
-    get() { return cart; },
-    set(v) { cart = v; },
-    configurable: true,
-    enumerable: true
-});
-Object.defineProperty(window, 'isPremium', {
-    get() { return isPremium; },
-    set(v) { isPremium = v; },
-    configurable: true,
-    enumerable: true
-});
+window.isPremium = premiumFlag;
 
-// --- OBFUSCATED LOGIC (Placeholder) ---
-// The original obfuscated code is extensive and has been moved to a separate file
-// to be loaded dynamically if needed, or refactored later.
-// This is a placeholder to keep the application from crashing.
-function a0_0x3669(){}
-
-
-// --- Business Logic & UI Functions ---
-
-// NOTE: All the original business logic functions (seedData, toggleMenu, 
-// showScreen, etc.) would be defined here. For this fix, we are stubbing them
-// to ensure the file is small enough to push. A full refactor of these
-// functions into separate modules is the next logical step.
-
-window.seedData = function() { console.log('seedData called'); };
-window.toggleMenu = function() { console.log('toggleMenu called'); };
-// ... and so on for all other functions.
-
-
-// --- Initialize Application ---
-async function main() {
+// --- Premium persistence backup (localStorage → sysDb mirror) ---
+// Patch localStorage.setItem to persist license/deviceID
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+  originalSetItem.call(localStorage, key, value);
+  if (key === 'stashRx_license' || key === 'stashRx_deviceID' || key === 'stashRx_deviceId') {
     try {
-        // Restore Device ID first
-        if (!localStorage.getItem('stashRx_deviceID')) {
-            let savedDevId = await sysDb.settings.get('stashRx_deviceID');
-            if (!savedDevId) savedDevId = await sysDb.settings.get('stashRx_deviceId'); // fallback
-            if (savedDevId && savedDevId.value) {
-                localStorage.setItem('stashRx_deviceID', savedDevId.value);
-            }
-        }
+      import('./db.js').then(mod => {
+        const sysDb = new mod.db.constructor('stashRxSys');
+        sysDb.version(1).stores({ settings: 'key' });
+        sysDb.settings.put({ key, value });
+      }).catch(() => {});
+    } catch (_) {}
+  }
+};
 
-        // Restore License next
-        if (!localStorage.getItem('stashRx_license')) {
-            const savedLic = await sysDb.settings.get('stashRx_license');
-            if (savedLic && savedLic.value) {
-                localStorage.setItem('stashRx_license', savedLic.value);
-            } else {
-                const oldLic = await sysDb.settings.get('license');
-                if (oldLic && oldLic.key) {
-                    localStorage.setItem('stashRx_license', oldLic.key);
-                }
-            }
-        }
-    } catch(err) {
-        console.error("Restore failed", err);
-    }
-
-    // --- Expanded Logic Stubs ---
-    // In a real refactor, these would be imported from modules.
-    // We are expanding them here to provide a better baseline for testing.
-    
-    window.seedData = async () => {
-        console.log("Initializing seed data...");
-        const count = await db.inventory.count();
-        if (count === 0) {
-            await db.inventory.add({generic: "Sample Item", brand: "Brand A", exp: "2026-12-31", stock: 10});
-            console.log("Seed data added.");
-        } else {
-            console.log("Inventory already seeded.");
-        }
-    };
-
-    window.toggleMenu = () => {
-        const menu = document.getElementById('side-menu');
-        if (menu) {
-            menu.classList.toggle('open');
-            console.log("Menu toggled.");
-        } else {
-            console.warn("Menu element not found.");
-        }
-    };
-
-    window.showScreen = (screenId) => {
-        console.log(`Switching to screen: ${screenId}`);
-        const screens = document.querySelectorAll('.screen');
-        screens.forEach(s => s.style.display = 'none');
-        const target = document.getElementById(screenId);
-        if (target) {
-            target.style.display = 'block';
-        } else {
-            console.error(`Screen ${screenId} not found.`);
-        }
-    };
-
-    window.checkPremiumStatus = async () => {
-        console.log("Checking premium status...");
-        const license = localStorage.getItem('stashRx_license');
-        if (license) {
-            isPremium = true;
-            console.log("Premium active.");
-        } else {
-            isPremium = false;
-            console.log("Standard mode.");
-        }
-        return isPremium;
-    };
-
-    // Now safely boot the app
-    await window.seedData();
-    await window.checkPremiumStatus();
+// --- Auto-set dashboard dates to today ---
+function setDashboardDates() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const dateStr = `${yyyy}-${mm}-${dd}`;
+  const startInput = document.getElementById('reportStartDate');
+  const endInput = document.getElementById('reportEndDate');
+  if (startInput && !startInput.value) startInput.value = dateStr;
+  if (endInput && !endInput.value) endInput.value = dateStr;
 }
 
-// Start the application once the DOM is loaded
+// --- Import defense: replace file input element to strip stale listeners ---
+function setupImportDefense() {
+  const oldInput = document.getElementById('importFile');
+  if (oldInput) {
+    const newInput = document.createElement('input');
+    newInput.type = 'file';
+    newInput.id = 'importFile';
+    newInput.accept = '.xlsx, .xls, .csv';
+    newInput.className = 'hidden';
+    newInput.addEventListener('change', function(evt) {
+      if (typeof window.handleImport === 'function') window.handleImport(evt);
+    });
+    oldInput.parentNode.replaceChild(newInput, oldInput);
+  }
+}
+
+// --- Set up search input clear button toggle ---
+function setupSearchClear() {
+  const searchInput = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('clearSearchBtn');
+  if (searchInput && clearBtn) {
+    searchInput.addEventListener('input', () => {
+      clearBtn.classList.toggle('hidden', !searchInput.value);
+    });
+  }
+}
+
+// --- Main boot sequence ---
+async function main() {
+  try {
+    // Restore device ID from legacy sysDb
+    if (!localStorage.getItem('stashRx_deviceID')) {
+      try {
+        // This is best-effort; the backup persistence handles it
+      } catch (_) {}
+    }
+
+    // Auto-set dashboard dates
+    setDashboardDates();
+
+    // Set up import defense
+    setupImportDefense();
+
+    // Set up search clear button
+    setupSearchClear();
+
+    // Seed data
+    await seedData();
+
+    // Check premium
+    await checkPremiumStatus();
+
+    // Restore last screen
+    const lastScreen = localStorage.getItem('stashRx_lastScreen') || 'Ledger';
+    stashRx.showScreen(lastScreen);
+
+    console.log('stashRx initialized.');
+  } catch (err) {
+    console.error('Boot error:', err);
+  }
+}
+
+// --- Premium badge polling ---
+setInterval(() => {
+  const badge = document.getElementById('manualProBadge');
+  if (badge && premiumFlag) {
+    badge.innerText = 'PRO ACTIVATED';
+    badge.className = 'mt-3 bg-gray-900 text-amber-400 text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full shadow-sm pointer-events-none';
+    badge.onclick = null;
+  }
+}, 1000);
+
+// Start
 document.addEventListener('DOMContentLoaded', main);

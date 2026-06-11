@@ -1,45 +1,81 @@
-        @supports (font: -apple-system-body) {
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        }
-        ::-webkit-scrollbar { display: none; }
-        body { -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
-        
-        .glass-header {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 0.5px solid rgba(0,0,0,0.1);
-        }
-        
-        .ios-toggle:checked {
-            background-color: #10b981; /* Emerald 500 */
-        }
-        .ios-toggle:checked:after {
-            transform: translateX(100%);
-            border-color: white;
-        }
-        
-        /* Drawer Animations */
-        #cartDrawer { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
-        .drawer-open { transform: translateY(0%); }
-        .drawer-closed { transform: translateY(100%); }
-        
-        /* Safe area bottom padding for iPhone home indicator */
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-        /* Screen transition animations */
-        [id^="screen"]:not(.hidden) {
-            animation: screenFadeIn 0.25s ease-out;
-        }
-        @keyframes screenFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+@supports (font: -apple-system-body) {
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+}
+::-webkit-scrollbar { display: none; }
+body { -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
 
-        /* Hide number input arrows */
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-    
+.glass-header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid rgba(0,0,0,0.1);
+}
+
+.ios-toggle:checked {
+    background-color: #10b981;
+}
+.ios-toggle:checked:after {
+    transform: translateX(100%);
+    border-color: white;
+}
+
+#cartDrawer { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.drawer-open { transform: translateY(0%); }
+.drawer-closed { transform: translateY(100%); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+[id^="screen"]:not(.hidden) {
+    animation: screenFadeIn 0.25s ease-out;
+}
+@keyframes screenFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+@media (min-width: 768px) {
+    body { background: linear-gradient(145deg, #E8E8ED 0%, #D1D1D6 100%); }
+    header.glass-header {
+        max-width: 520px; left: 0; right: 0; margin: 0 auto;
+        border-radius: 0 0 16px 16px;
+        border: 0.5px solid rgba(0,0,0,0.06);
+        border-top: none;
+        box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+    }
+    [id^="screen"]:not(.hidden) {
+        max-width: 520px; margin-left: auto; margin-right: auto;
+        background: #F2F2F7; box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    }
+    #miniCart { max-width: 488px; left: 0 !important; right: 0 !important; margin: 0 auto; }
+    #cartDrawer { max-width: 520px; left: 0; right: 0; margin: 0 auto; border-radius: 20px 20px 0 0; }
+    #sideMenuPanel { width: 300px !important; border-radius: 0 20px 20px 0; }
+    #iosModalCard { max-width: 320px; }
+    #addModalCard, #editModalCard { max-width: 420px; }
+}
+
+@media (min-width: 1024px) {
+    header.glass-header { max-width: 720px !important; }
+    [id^="screen"]:not(.hidden) { max-width: 720px !important; }
+    #cartDrawer { max-width: 720px !important; }
+    #miniCart { max-width: 688px !important; }
+    #sideMenuPanel { width: 320px !important; }
+    #analyticsModalCard { max-width: 660px; margin: 0 auto; }
+}
+
+#sideMenuPanel {
+    padding-top: env(safe-area-inset-top, 0px);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.08);
+}
+#settingsNavPanel .settings-close-area {
+    padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 8px);
+}
